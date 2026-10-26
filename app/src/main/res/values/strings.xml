@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VibeLoad</string>
+    <string name="app_version_display">Phiên bản %1$s (%2$d)</string>
+
+    <!-- Navigation Tabs -->
+    <string name="tab_home">Trang chủ</string>
+    <string name="tab_downloading">Đang tải</string>
+    <string name="tab_library">Thư viện</string>
+    <string name="tab_settings">Cài đặt</string>
+
+    <!-- Home Tab -->
+    <string name="home_input_hint">Dán hoặc nhập liên kết media tại đây...</string>
+    <string name="home_paste_button">Dán link</string>
+    <string name="home_analyze_button">Phân tích</string>
+    <string name="home_analyzing">Đang phân tích liên kết...</string>
+    <string name="home_media_preview">Xem trước</string>
+    <string name="home_author_label">Tác giả:</string>
+    <string name="home_duration_label">Thời lượng:</string>
+    <string name="home_platform_label">Nền tảng:</string>
+    <string name="home_format_selection_title">Chọn định dạng &amp; chất lượng</string>
+    <string name="home_format_video">Video (MP4)</string>
+    <string name="home_format_mp3">Âm thanh (MP3)</string>
+    <string name="home_format_original_audio">Âm thanh gốc</string>
+    <string name="home_bitrate_label">Chất lượng âm thanh (Bitrate):</string>
+    <string name="home_filename_label">Tên file lưu trữ:</string>
+    <string name="home_download_button">Tải xuống ngay</string>
+    <string name="home_clipboard_empty">Khay nhớ tạm không chứa liên kết hợp lệ</string>
+    <string name="home_invalid_url">Địa chỉ liên kết không hợp lệ. Vui lòng kiểm tra lại URL!</string>
+
+    <!-- Downloading Tab -->
+    <string name="dl_active_task_title">Tác vụ đang tải</string>
+    <string name="dl_no_active_task">Hiện không có tác vụ tải nào đang hoạt động</string>
+    <string name="dl_status_resolving">Đang chuẩn bị...</string>
+    <string name="dl_status_downloading">Đang tải xuống (%1$d%%)</string>
+    <string name="dl_status_processing">Đang ghép / chuyển đổi file...</string>
+    <string name="dl_status_saving">Đang lưu vào MediaStore...</string>
+    <string name="dl_status_completed">Hoàn tất!</string>
+    <string name="dl_status_paused">Đã tạm dừng</string>
+    <string name="dl_status_retrying">Đang tự động thử lại (%1$d/%2$d)...</string>
+    <string name="dl_status_failed">Thất bại</string>
+    <string name="dl_status_cancelled">Đã hủy</string>
+    <string name="dl_speed_label">Tốc độ:</string>
+    <string name="dl_size_label">Dung lượng:</string>
+    <string name="dl_eta_label">Còn lại:</string>
+    <string name="dl_btn_pause">Tạm dừng</string>
+    <string name="dl_btn_resume">Tiếp tục</string>
+    <string name="dl_btn_cancel">Hủy tải</string>
+    <string name="dl_btn_retry">Thử lại</string>
+
+    <!-- Library Tab -->
+    <string name="lib_tab_videos">Video</string>
+    <string name="lib_tab_audios">Âm thanh</string>
+    <string name="lib_tab_history">Lịch sử</string>
+    <string name="lib_search_hint">Tìm kiếm trong thư viện...</string>
+    <string name="lib_empty_list">Chưa có tập tin nào trong mục này</string>
+    <string name="lib_sort_by">Sắp xếp theo</string>
+    <string name="lib_sort_newest">Mới nhất</string>
+    <string name="lib_sort_oldest">Cũ nhất</string>
+    <string name="lib_sort_name">Tên (A-Z)</string>
+    <string name="lib_sort_size">Dung lượng</string>
+    <string name="lib_action_play">Phát</string>
+    <string name="lib_action_rename">Đổi tên</string>
+    <string name="lib_action_share">Chia sẻ</string>
+    <string name="lib_action_open_with">Mở bằng...</string>
+    <string name="lib_action_delete">Xóa</string>
+    <string name="lib_delete_confirm_title">Xác nhận xóa tập tin</string>
+    <string name="lib_delete_confirm_msg">Bạn có chắc chắn muốn xóa vĩnh viễn tập tin \"%1$s\" khỏi thiết bị?</string>
+    <string name="lib_btn_delete">Xóa vĩnh viễn</string>
+    <string name="lib_btn_cancel">Hủy</string>
+    <string name="lib_rename_dialog_title">Đổi tên tập tin</string>
+    <string name="lib_rename_input_hint">Nhập tên mới...</string>
+    <string name="lib_btn_save">Lưu</string>
+
+    <!-- Player -->
+    <string name="player_title">Trình phát VibeLoad</string>
+    <string name="player_speed">Tốc độ: %1$.2fx</string>
+    <string name="player_error">Không thể phát tập tin này</string>
+
+    <!-- Settings Tab -->
+    <string name="settings_section_appearance">Giao diện hiển thị</string>
+    <string name="settings_theme_title">Chế độ giao diện</string>
+    <string name="settings_theme_system">Theo hệ thống</string>
+    <string name="settings_theme_light">Sáng</string>
+    <string name="settings_theme_dark">Tối</string>
+    <string name="settings_section_storage">Quản lý lưu trữ &amp; Dọn dẹp</string>
+    <string name="settings_clear_history">Xóa lịch sử tải</string>
+    <string name="settings_clear_history_desc">Xóa danh sách lịch sử nhưng giữ nguyên các file video/audio đã tải</string>
+    <string name="settings_clear_cache">Xóa bộ nhớ đệm (Cache)</string>
+    <string name="settings_clear_cache_desc">Dọn dẹp ảnh thu nhỏ và dữ liệu mạng tạm thời</string>
+    <string name="settings_clear_temp">Dọn file tải dở &amp; Tạm</string>
+    <string name="settings_clear_temp_desc">Xóa các file tải dang dở hoặc file tạm trong quá trình ghép</string>
+    <string name="settings_section_engine">Thông tin Download Engine</string>
+    <string name="settings_engine_desc">Chaquopy + yt-dlp + FFmpegKit</string>
+    <string name="settings_section_about">Thông tin &amp; Cập nhật</string>
+    <string name="settings_app_version">Phiên bản hiện tại: 1.0.0 (v1)</string>
+    <string name="settings_check_update">Kiểm tra bản cập nhật APK</string>
+    <string name="settings_privacy_policy">Chính sách quyền riêng tư</string>
+    <string name="settings_licenses">Giấy phép mã nguồn mở</string>
+    <string name="settings_update_checking">Đang kiểm tra cập nhật trên GitHub Releases...</string>
+    <string name="settings_update_latest">Bạn đang sử dụng phiên bản mới nhất!</string>
+    <string name="settings_update_available">Có bản cập nhật mới: %1$s</string>
+    <string name="settings_update_btn_download">Tải APK mới</string>
+    <string name="settings_toast_cleared">Đã hoàn tất dọn dẹp!</string>
+
+    <!-- Error Messages (100% Vietnamese as per FR-15) -->
+    <string name="error_invalid_url">Liên kết không hợp lệ. Vui lòng cung cấp URL chính xác.</string>
+    <string name="error_source_unreachable">Không thể truy cập máy chủ nguồn. Vui lòng kiểm tra kết nối mạng.</string>
+    <string name="error_unsupported_format">Định dạng hoặc độ phân giải này không được hỗ trợ bởi nguồn.</string>
+    <string name="error_network_connection">Mất kết nối mạng trong quá trình truyền tải dữ liệu.</string>
+    <string name="error_insufficient_storage">Dung lượng bộ nhớ thiết bị không đủ để lưu trữ file.</string>
+    <string name="error_download_failed">Quá trình tải dữ liệu gặp sự cố. Vui lòng thử lại.</string>
+    <string name="error_conversion_failed">Lỗi trong quá trình xử lý/chuyển đổi định dạng đa phương tiện.</string>
+    <string name="error_storage_save">Không thể lưu file vào thư viện MediaStore của thiết bị.</string>
+    <string name="error_permission_denied">Ứng dụng chưa được cấp quyền cần thiết để hoàn tất tác vụ.</string>
+    <string name="error_another_task_running">Hiện đang có một tác vụ tải hoạt động. Vui lòng chờ hoàn tất.</string>
+    <string name="error_playlist_detected">VibeLoad chỉ tải 1 video mỗi lần. Vui lòng chọn liên kết video cụ thể thay vì playlist.</string>
+
+    <!-- Notification Strings -->
+    <string name="notif_channel_name">Tiến trình tải VibeLoad</string>
+    <string name="notif_channel_desc">Hiển thị thông báo tiến trình tải video và âm thanh</string>
+    <string name="notif_downloading_title">Đang tải: %1$s</string>
+    <string name="notif_processing_title">Đang xử lý: %1$s</string>
+    <string name="notif_success_title">Tải thành công: %1$s</string>
+    <string name="notif_failed_title">Tải thất bại: %1$s</string>
+    <string name="notif_action_pause">Tạm dừng</string>
+    <string name="notif_action_resume">Tiếp tục</string>
+    <string name="notif_action_cancel">Hủy</string>
+</resources>
