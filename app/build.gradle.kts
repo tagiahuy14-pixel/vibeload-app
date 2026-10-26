@@ -33,9 +33,24 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = project.rootProject.file("release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "vibeload_password"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "vibeload"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "vibeload_password"
+            } else {
+                initWith(getByName("debug"))
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
