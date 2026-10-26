@@ -10,6 +10,10 @@ import com.chaquo.python.android.AndroidPlatform
 
 class VibeLoadApp : Application() {
 
+    val container: AppContainer by lazy {
+        AppContainer(this)
+    }
+
     override fun onCreate() {
         super.onCreate()
         instance = this
