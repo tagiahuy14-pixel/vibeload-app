@@ -144,21 +144,23 @@ class HomeViewModel(
         _uiState.update { it.copy(errorMessage = null) }
     }
 
-    private fun isValidUrl(url: String): Boolean {
-        if (url.isEmpty()) return false
-        val lower = url.lowercase()
-        return (lower.startsWith("https://") || lower.startsWith("http://")) &&
-                !lower.startsWith("file://") &&
-                !lower.startsWith("content://") &&
-                !lower.contains("127.0.0.1") &&
-                !lower.contains("localhost")
-    }
-
-    private fun extractUrlFromText(text: String): String {
-        val parts = text.split("\\s+".toRegex())
-        for (part in parts) {
-            if (isValidUrl(part)) return part
+    companion object {
+        fun isValidUrl(url: String): Boolean {
+            if (url.isEmpty()) return false
+            val lower = url.lowercase()
+            return (lower.startsWith("https://") || lower.startsWith("http://")) &&
+                    !lower.startsWith("file://") &&
+                    !lower.startsWith("content://") &&
+                    !lower.contains("127.0.0.1") &&
+                    !lower.contains("localhost")
         }
-        return ""
+
+        fun extractUrlFromText(text: String): String {
+            val parts = text.split("\\s+".toRegex())
+            for (part in parts) {
+                if (isValidUrl(part)) return part
+            }
+            return ""
+        }
     }
 }

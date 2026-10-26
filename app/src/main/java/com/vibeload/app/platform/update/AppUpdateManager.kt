@@ -92,18 +92,20 @@ class AppUpdateManager(
         }
     }
 
-    private fun isNewerVersion(remote: String, current: String): Boolean {
-        val rParts = remote.split(".").mapNotNull { it.toIntOrNull() }
-        val cParts = current.split(".").mapNotNull { it.toIntOrNull() }
+    companion object {
+        fun isNewerVersion(remote: String, current: String): Boolean {
+            val rParts = remote.split(".").mapNotNull { it.toIntOrNull() }
+            val cParts = current.split(".").mapNotNull { it.toIntOrNull() }
 
-        val len = maxOf(rParts.size, cParts.size)
-        for (i in 0 until len) {
-            val r = rParts.getOrElse(i) { 0 }
-            val c = cParts.getOrElse(i) { 0 }
-            if (r > c) return true
-            if (r < c) return false
+            val len = maxOf(rParts.size, cParts.size)
+            for (i in 0 until len) {
+                val r = rParts.getOrElse(i) { 0 }
+                val c = cParts.getOrElse(i) { 0 }
+                if (r > c) return true
+                if (r < c) return false
+            }
+            return false
         }
-        return false
     }
 
     suspend fun downloadAndInstallApk(downloadUrl: String, onProgress: (Int) -> Unit): Result<File> = withContext(Dispatchers.IO) {

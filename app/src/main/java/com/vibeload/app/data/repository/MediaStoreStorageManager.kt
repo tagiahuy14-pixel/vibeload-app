@@ -21,28 +21,34 @@ class MediaStoreStorageManager(
 
     private val contentResolver: ContentResolver = context.contentResolver
 
+    companion object {
+        fun sanitize(rawTitle: String, extension: String): String {
+            // Remove illegal characters on Android/Windows: \ / : * ? " < > |
+            var sanitized = rawTitle
+                .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                .replace(Regex("\\.{2,}"), "") // prevent path traversal ..
+                .trim()
+
+            if (sanitized.isEmpty() || sanitized == "_") {
+                sanitized = "VibeLoad_Media_${System.currentTimeMillis()}"
+            }
+
+            // Limit length to avoid filesystem max path issues
+            if (sanitized.length > 100) {
+                sanitized = sanitized.substring(0, 100).trim()
+            }
+
+            val cleanExt = extension.removePrefix(".")
+            return if (sanitized.endsWith(".$cleanExt", ignoreCase = true)) {
+                sanitized
+            } else {
+                "$sanitized.$cleanExt"
+            }
+        }
+    }
+
     override fun sanitizeFilename(rawTitle: String, extension: String): String {
-        // Remove illegal characters on Android/Windows: \ / : * ? " < > |
-        var sanitized = rawTitle
-            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-            .replace(Regex("\\.{2,}"), "") // prevent path traversal ..
-            .trim()
-
-        if (sanitized.isEmpty() || sanitized == "_") {
-            sanitized = "VibeLoad_Media_${System.currentTimeMillis()}"
-        }
-
-        // Limit length to avoid filesystem max path issues
-        if (sanitized.length > 100) {
-            sanitized = sanitized.substring(0, 100).trim()
-        }
-
-        val cleanExt = extension.removePrefix(".")
-        return if (sanitized.endsWith(".$cleanExt", ignoreCase = true)) {
-            sanitized
-        } else {
-            "$sanitized.$cleanExt"
-        }
+        return sanitize(rawTitle, extension)
     }
 
     override suspend fun saveToMediaStore(
