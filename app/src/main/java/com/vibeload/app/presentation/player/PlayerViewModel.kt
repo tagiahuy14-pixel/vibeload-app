@@ -34,74 +34,113 @@ class PlayerViewModel : ViewModel() {
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private var exoPlayer: ExoPlayer? = null
+    private var currentMediaUri: Uri? = null
     private var progressJob: Job? = null
 
     fun getPlayer(): ExoPlayer? = exoPlayer
 
     fun initPlayer(context: Context, mediaUri: Uri, title: String, isAudio: Boolean) {
-        if (exoPlayer != null) return
+        if (currentMediaUri == mediaUri && exoPlayer != null && _uiState.value.errorMessage == null) {
+            return
+        }
+
+        releasePlayer()
+        currentMediaUri = mediaUri
 
         _uiState.update {
             it.copy(
                 title = title,
                 isAudio = isAudio,
                 errorMessage = null,
-                isBuffering = true
+                isBuffering = true,
+                currentPositionMs = 0L,
+                durationMs = 0L,
+                isPlaying = false
             )
         }
 
+        // Validate URI accessibility before feeding to ExoPlayer
+        var accessible = true
         try {
-            val player = ExoPlayer.Builder(context).build().apply {
-                val mediaItem = MediaItem.fromUri(mediaUri)
-                setMediaItem(mediaItem)
-                prepare()
-                playWhenReady = true
+            if (mediaUri.scheme == "content") {
+                context.contentResolver.openInputStream(mediaUri)?.use { } ?: run { accessible = false }
+            } else if (mediaUri.scheme == "file") {
+                val f = java.io.File(mediaUri.path ?: "")
+                if (!f.exists() || f.length() == 0L) accessible = false
+            }
+        } catch (e: Exception) {
+            accessible = false
+        }
 
-                addListener(object : Player.Listener {
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        _uiState.update { it.copy(isPlaying = isPlaying) }
-                        if (isPlaying) {
-                            startProgressUpdates()
-                        } else {
-                            progressJob?.cancel()
-                        }
-                    }
+        if (!accessible) {
+            _uiState.update {
+                it.copy(
+                    isBuffering = false,
+                    errorMessage = "Không thể phát tệp phương tiện. Tệp có thể đã bị di chuyển hoặc bị hỏng"
+                )
+            }
+            return
+        }
 
-                    override fun onPlaybackStateChanged(playbackState: Int) {
-                        when (playbackState) {
-                            Player.STATE_BUFFERING -> {
-                                _uiState.update { it.copy(isBuffering = true) }
-                            }
-                            Player.STATE_READY -> {
-                                val dur = duration.coerceAtLeast(0L)
-                                _uiState.update {
-                                    it.copy(
-                                        isBuffering = false,
-                                        durationMs = dur
-                                    )
-                                }
-                            }
-                            Player.STATE_ENDED -> {
-                                _uiState.update { it.copy(isPlaying = false) }
+        try {
+            val extractorsFactory = androidx.media3.extractor.DefaultExtractorsFactory()
+                .setConstantBitrateSeekingEnabled(true)
+            val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(context)
+            val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
+
+            val player = ExoPlayer.Builder(context)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .build().apply {
+                    val mediaItem = MediaItem.fromUri(mediaUri)
+                    setMediaItem(mediaItem)
+                    prepare()
+                    playWhenReady = true
+
+                    addListener(object : Player.Listener {
+                        override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            _uiState.update { it.copy(isPlaying = isPlaying) }
+                            if (isPlaying) {
+                                startProgressUpdates()
+                            } else {
                                 progressJob?.cancel()
                             }
-                            Player.STATE_IDLE -> {
-                                _uiState.update { it.copy(isBuffering = false) }
+                        }
+
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            when (playbackState) {
+                                Player.STATE_BUFFERING -> {
+                                    _uiState.update { it.copy(isBuffering = true) }
+                                }
+                                Player.STATE_READY -> {
+                                    val dur = duration.coerceAtLeast(0L)
+                                    _uiState.update {
+                                        it.copy(
+                                            isBuffering = false,
+                                            durationMs = dur
+                                        )
+                                    }
+                                }
+                                Player.STATE_ENDED -> {
+                                    _uiState.update { it.copy(isPlaying = false) }
+                                    progressJob?.cancel()
+                                }
+                                Player.STATE_IDLE -> {
+                                    _uiState.update { it.copy(isBuffering = false) }
+                                }
                             }
                         }
-                    }
 
-                    override fun onPlayerError(error: PlaybackException) {
-                        _uiState.update {
-                            it.copy(
-                                isBuffering = false,
-                                isPlaying = false,
-                                errorMessage = "Không thể phát tệp phương tiện. Tệp có thể đã bị di chuyển hoặc bị hỏng (${error.localizedMessage})"
-                            )
+                        override fun onPlayerError(error: PlaybackException) {
+                            _uiState.update {
+                                it.copy(
+                                    isBuffering = false,
+                                    isPlaying = false,
+                                    errorMessage = "Không thể phát tệp phương tiện. Tệp có thể đã bị di chuyển hoặc bị hỏng (${error.localizedMessage})"
+                                )
+                            }
                         }
-                    }
-                })
-            }
+                    })
+                }
 
             exoPlayer = player
         } catch (e: Exception) {
@@ -112,6 +151,28 @@ class PlayerViewModel : ViewModel() {
                 )
             }
         }
+    }
+
+    fun pausePlayer() {
+        exoPlayer?.pause()
+        _uiState.update { it.copy(isPlaying = false) }
+    }
+
+    fun releasePlayer() {
+        progressJob?.cancel()
+        progressJob = null
+        try {
+            exoPlayer?.stop()
+            exoPlayer?.release()
+        } catch (_: Exception) { }
+        exoPlayer = null
+        currentMediaUri = null
+    }
+
+    fun retry(context: Context) {
+        val uri = currentMediaUri ?: return
+        val state = _uiState.value
+        initPlayer(context, uri, state.title, state.isAudio)
     }
 
     private fun startProgressUpdates() {

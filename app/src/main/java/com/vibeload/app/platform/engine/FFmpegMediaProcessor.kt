@@ -20,7 +20,8 @@ class FFmpegMediaProcessor : MediaProcessor {
         onProgress: (Float) -> Unit
     ): Result<String> = withContext(Dispatchers.IO) {
         suspendCancellableCoroutine { continuation ->
-            val cmd = "-y -i \"$videoPath\" -i \"$audioPath\" -c:v copy -c:a aac -strict experimental \"$outputPath\""
+            // Use stream copy for video (instant, no quality loss) and encode audio to AAC 192kbps with faststart
+            val cmd = "-y -i \"$videoPath\" -i \"$audioPath\" -map 0:v:0 -map 1:a:? -c:v copy -c:a aac -b:a 192k -shortest -movflags +faststart \"$outputPath\""
 
             val session = FFmpegKit.executeAsync(
                 cmd,
@@ -32,8 +33,15 @@ class FFmpegMediaProcessor : MediaProcessor {
                     } else if (ReturnCode.isCancel(returnCode)) {
                         continuation.resume(Result.failure(Exception("OPERATION_CANCELLED")))
                     } else {
-                        val failStackTrace = completedSession.failStackTrace ?: "Lỗi FFmpeg không xác định"
-                        continuation.resume(Result.failure(Exception("Lỗi ghép luồng: $failStackTrace")))
+                        // Fallback attempt: if strict copy failed due to container flags, try with experimental flag
+                        val fallbackCmd = "-y -i \"$videoPath\" -i \"$audioPath\" -map 0:v:0 -map 1:a:? -c:v copy -strict experimental -c:a aac -b:a 192k -shortest -movflags +faststart \"$outputPath\""
+                        val fallbackSession = FFmpegKit.execute(fallbackCmd)
+                        if (ReturnCode.isSuccess(fallbackSession.returnCode)) {
+                            continuation.resume(Result.success(outputPath))
+                        } else {
+                            val failStackTrace = completedSession.failStackTrace ?: fallbackSession.failStackTrace ?: "Lỗi FFmpeg không xác định"
+                            continuation.resume(Result.failure(Exception("Lỗi ghép luồng âm thanh & video: $failStackTrace")))
+                        }
                     }
                 },
                 { log ->

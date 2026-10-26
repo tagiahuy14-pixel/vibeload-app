@@ -42,6 +42,12 @@ fun PlayerScreen(
         viewModel.initPlayer(context, uri, title, isAudio)
     }
 
+    DisposableEffect(mediaUriString) {
+        onDispose {
+            viewModel.pausePlayer()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -87,16 +93,26 @@ fun PlayerScreen(
                         Icon(
                             imageVector = Icons.Default.ErrorOutline,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
+                            tint = Color(0xFFF87171),
                             modifier = Modifier.size(56.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = uiState.errorMessage ?: "",
                             color = Color.White,
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Button(
+                            onClick = { viewModel.retry(context) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Thử lại", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 } else if (isAudio) {
                     // Audio Disc Animation / Icon

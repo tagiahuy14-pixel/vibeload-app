@@ -99,15 +99,18 @@ class SettingsViewModel(
     fun checkForUpdates() {
         viewModelScope.launch {
             _uiState.update { it.copy(isCheckingUpdate = true, message = null) }
-            val res = appUpdateManager.checkForUpdates()
+            val res = appUpdateManager.checkForUpdates(isAuto = false, force = true)
             if (res.isSuccess) {
                 val info = res.getOrThrow()
                 _uiState.update {
                     it.copy(
                         isCheckingUpdate = false,
                         updateInfo = info,
-                        message = if (info.hasUpdate) "Có bản cập nhật mới v${info.latestVersionName}" else "Bạn đang sử dụng phiên bản mới nhất (v${info.latestVersionName})"
+                        message = if (info.hasUpdate) "Có bản cập nhật mới v${info.latestVersionName} (${info.latestVersionCode})" else "Bạn đang sử dụng phiên bản mới nhất (v${info.latestVersionName})"
                     )
+                }
+                if (info.hasUpdate) {
+                    appUpdateManager.showManualUpdatePrompt(info)
                 }
             } else {
                 _uiState.update {

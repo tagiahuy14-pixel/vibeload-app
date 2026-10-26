@@ -140,13 +140,14 @@ fun LibraryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(items, key = { it.id }) { item ->
-                        MediaItemCard(
+                        com.vibeload.app.presentation.home.VibeMediaCard(
                             item = item,
                             onPlay = { onPlayMedia(item) },
+                            onOpenFolder = { viewModel.openContainingFolder(context, item) },
+                            onDelete = { viewModel.requestDelete(item) },
                             onRename = { viewModel.requestRename(item) },
                             onShare = { viewModel.shareItem(context, item) },
-                            onOpenExternal = { viewModel.openWithExternalApp(context, item) },
-                            onDelete = { viewModel.requestDelete(item) }
+                            onOpenWith = { viewModel.openWithExternalApp(context, item) }
                         )
                     }
                 }

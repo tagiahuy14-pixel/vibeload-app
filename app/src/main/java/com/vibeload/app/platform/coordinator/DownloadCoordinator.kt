@@ -96,7 +96,9 @@ class DownloadCoordinator(
 
     private suspend fun executeDownloadPipeline(task: DownloadTask, metadata: MediaMetadata) {
         val tempDir = File(context.cacheDir, "vibeload_temp").apply { mkdirs() }
-        val rawTempFile = File(tempDir, "temp_dl_${task.id}.${task.selectedFormat.ext}")
+        val rawTempFile = File(tempDir, "temp_dl_${task.id}.${task.selectedFormat.ext.ifEmpty { "mp4" }}")
+        val videoTempFile = File(tempDir, "temp_vid_${task.id}.${task.selectedFormat.ext.ifEmpty { "mp4" }}")
+        val audioTempFile = File(tempDir, "temp_aud_${task.id}.m4a")
         val processedFile = File(tempDir, "temp_proc_${task.id}.${if (task.selectedFormat.isVideo) "mp4" else "mp3"}")
 
         var attempt = 0
@@ -118,98 +120,258 @@ class DownloadCoordinator(
                     retryCount = attempt
                 )
 
-                val progressListener = object : DownloadProgressListener {
-                    override fun onProgress(
-                        percent: Float,
-                        speed: Float,
-                        downloadedBytes: Long,
-                        totalBytes: Long,
-                        etaSeconds: Long
-                    ) {
-                        _currentTask.value = _currentTask.value?.copy(
-                            progress = percent,
-                            speedBytesPerSec = speed,
-                            downloadedBytes = downloadedBytes,
-                            totalBytes = if (totalBytes > 0) totalBytes else task.totalBytes,
-                            etaSeconds = etaSeconds
-                        )
-                        DownloadForegroundService.updateProgress(
-                            context,
-                            task.title,
-                            percent.toInt(),
-                            speed,
-                            false
-                        )
-                    }
-
-                    override fun isCancelled(): Boolean = isCancelled || isPaused
-                }
-
-                val formatSpec = if (task.selectedFormat.isVideo) {
-                    if (task.selectedFormat.formatId.isNotEmpty()) task.selectedFormat.formatId else "bestvideo+bestaudio/best"
-                } else {
-                    "bestaudio/best"
-                }
-
-                val dlResult = downloadEngine.downloadStream(
-                    task.url,
-                    formatSpec,
-                    rawTempFile.absolutePath,
-                    progressListener
-                )
-
-                if (isCancelled) {
-                    handleCancellation(rawTempFile, processedFile)
-                    return
-                }
-
-                if (dlResult.isFailure) {
-                    throw dlResult.exceptionOrNull() ?: Exception("Lỗi khi tải stream")
-                }
-
-                // Processing stage (FFmpeg)
                 val finalFileToPublish: File
-                if (!task.selectedFormat.isVideo && !task.selectedFormat.isOriginalAudio) {
-                    // Transcode to MP3 with chosen bitrate (128k, 192k, 256k, 320k)
-                    _currentTask.value = _currentTask.value?.copy(status = DownloadStatus.PROCESSING)
-                    DownloadForegroundService.updateStatus(context, context.getString(R.string.notif_processing_title, task.title))
 
-                    val transcodeResult = mediaProcessor.transcodeToMp3(
-                        rawTempFile.absolutePath,
-                        processedFile.absolutePath,
-                        task.selectedFormat.bitrateKbps,
-                        onProgress = { }
-                    )
+                if (task.selectedFormat.isVideo) {
+                    if (task.selectedFormat.needsMerge) {
+                        // Two-stage download: Video track + Audio track, then merge via FFmpegKit (in-process JNI)
+                        // Step 1: Download video track (0% -> 70%)
+                        val videoListener = object : DownloadProgressListener {
+                            override fun onProgress(
+                                percent: Float,
+                                speed: Float,
+                                downloadedBytes: Long,
+                                totalBytes: Long,
+                                etaSeconds: Long
+                            ) {
+                                val scaledPercent = (percent * 0.70f).coerceIn(0f, 70f)
+                                _currentTask.value = _currentTask.value?.copy(
+                                    progress = scaledPercent,
+                                    speedBytesPerSec = speed,
+                                    downloadedBytes = downloadedBytes,
+                                    totalBytes = if (totalBytes > 0) (totalBytes * 1.3f).toLong() else task.totalBytes,
+                                    etaSeconds = etaSeconds
+                                )
+                                DownloadForegroundService.updateProgress(
+                                    context,
+                                    task.title,
+                                    scaledPercent.toInt(),
+                                    speed,
+                                    false
+                                )
+                            }
 
-                    if (transcodeResult.isFailure) {
-                        throw transcodeResult.exceptionOrNull() ?: Exception("Lỗi chuyển đổi MP3")
+                            override fun isCancelled(): Boolean = isCancelled || isPaused
+                        }
+
+                        val vidFormatSpec = if (task.selectedFormat.formatId.isNotEmpty()) task.selectedFormat.formatId else "bestvideo"
+                        val vidResult = downloadEngine.downloadStream(
+                            task.url,
+                            vidFormatSpec,
+                            videoTempFile.absolutePath,
+                            videoListener
+                        )
+
+                        if (isCancelled) {
+                            handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
+                            return
+                        }
+
+                        if (vidResult.isFailure) {
+                            throw vidResult.exceptionOrNull() ?: Exception("Lỗi khi tải luồng hình ảnh")
+                        }
+
+                        // Step 2: Download audio track (70% -> 90%)
+                        val audioListener = object : DownloadProgressListener {
+                            override fun onProgress(
+                                percent: Float,
+                                speed: Float,
+                                downloadedBytes: Long,
+                                totalBytes: Long,
+                                etaSeconds: Long
+                            ) {
+                                val scaledPercent = (70f + percent * 0.20f).coerceIn(70f, 90f)
+                                _currentTask.value = _currentTask.value?.copy(
+                                    progress = scaledPercent,
+                                    speedBytesPerSec = speed,
+                                    downloadedBytes = downloadedBytes,
+                                    totalBytes = task.totalBytes,
+                                    etaSeconds = etaSeconds
+                                )
+                                DownloadForegroundService.updateProgress(
+                                    context,
+                                    task.title,
+                                    scaledPercent.toInt(),
+                                    speed,
+                                    false
+                                )
+                            }
+
+                            override fun isCancelled(): Boolean = isCancelled || isPaused
+                        }
+
+                        val audFormatSpec = "bestaudio[ext=m4a]/bestaudio/best"
+                        val audResult = downloadEngine.downloadStream(
+                            task.url,
+                            audFormatSpec,
+                            audioTempFile.absolutePath,
+                            audioListener
+                        )
+
+                        if (isCancelled) {
+                            handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
+                            return
+                        }
+
+                        if (audResult.isFailure) {
+                            throw audResult.exceptionOrNull() ?: Exception("Lỗi khi tải luồng âm thanh")
+                        }
+
+                        // Step 3: Merge video and audio with FFmpegKit (90% -> 98%)
+                        _currentTask.value = _currentTask.value?.copy(status = DownloadStatus.PROCESSING, progress = 92f)
+                        DownloadForegroundService.updateStatus(context, context.getString(R.string.notif_processing_title, task.title))
+
+                        val mergeResult = mediaProcessor.mergeVideoAndAudio(
+                            videoTempFile.absolutePath,
+                            audioTempFile.absolutePath,
+                            processedFile.absolutePath,
+                            onProgress = { }
+                        )
+
+                        // Clean up raw component streams
+                        videoTempFile.delete()
+                        audioTempFile.delete()
+
+                        if (mergeResult.isFailure) {
+                            processedFile.delete()
+                            throw mergeResult.exceptionOrNull() ?: Exception("Lỗi khi ghép hình ảnh và âm thanh.")
+                        }
+
+                        finalFileToPublish = processedFile
+                    } else {
+                        // Single combined video+audio stream (Facebook sd/hd, TikTok, YouTube 18/22)
+                        val combinedListener = object : DownloadProgressListener {
+                            override fun onProgress(
+                                percent: Float,
+                                speed: Float,
+                                downloadedBytes: Long,
+                                totalBytes: Long,
+                                etaSeconds: Long
+                            ) {
+                                _currentTask.value = _currentTask.value?.copy(
+                                    progress = percent,
+                                    speedBytesPerSec = speed,
+                                    downloadedBytes = downloadedBytes,
+                                    totalBytes = if (totalBytes > 0) totalBytes else task.totalBytes,
+                                    etaSeconds = etaSeconds
+                                )
+                                DownloadForegroundService.updateProgress(
+                                    context,
+                                    task.title,
+                                    percent.toInt(),
+                                    speed,
+                                    false
+                                )
+                            }
+
+                            override fun isCancelled(): Boolean = isCancelled || isPaused
+                        }
+
+                        val formatSpec = if (task.selectedFormat.formatId.isNotEmpty()) task.selectedFormat.formatId else "best"
+                        val dlResult = downloadEngine.downloadStream(
+                            task.url,
+                            formatSpec,
+                            rawTempFile.absolutePath,
+                            combinedListener
+                        )
+
+                        if (isCancelled) {
+                            handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
+                            return
+                        }
+
+                        if (dlResult.isFailure) {
+                            throw dlResult.exceptionOrNull() ?: Exception("Lỗi khi tải video")
+                        }
+
+                        finalFileToPublish = rawTempFile
                     }
-                    finalFileToPublish = processedFile
-                    rawTempFile.delete()
-                } else if (task.selectedFormat.needsMerge) {
-                    // Merging video & audio if separated
-                    _currentTask.value = _currentTask.value?.copy(status = DownloadStatus.PROCESSING)
-                    DownloadForegroundService.updateStatus(context, context.getString(R.string.notif_processing_title, task.title))
-
-                    val mergeResult = mediaProcessor.mergeVideoAndAudio(
-                        rawTempFile.absolutePath,
-                        rawTempFile.absolutePath,
-                        processedFile.absolutePath,
-                        onProgress = { }
-                    )
-                    finalFileToPublish = if (mergeResult.isSuccess) processedFile else rawTempFile
                 } else {
-                    finalFileToPublish = rawTempFile
+                    // Audio stream
+                    val audioListener = object : DownloadProgressListener {
+                        override fun onProgress(
+                            percent: Float,
+                            speed: Float,
+                            downloadedBytes: Long,
+                            totalBytes: Long,
+                            etaSeconds: Long
+                        ) {
+                            val scaledPercent = if (task.selectedFormat.isOriginalAudio) percent else (percent * 0.80f).coerceIn(0f, 80f)
+                            _currentTask.value = _currentTask.value?.copy(
+                                progress = scaledPercent,
+                                speedBytesPerSec = speed,
+                                downloadedBytes = downloadedBytes,
+                                totalBytes = if (totalBytes > 0) totalBytes else task.totalBytes,
+                                etaSeconds = etaSeconds
+                            )
+                            DownloadForegroundService.updateProgress(
+                                context,
+                                task.title,
+                                scaledPercent.toInt(),
+                                speed,
+                                false
+                            )
+                        }
+
+                        override fun isCancelled(): Boolean = isCancelled || isPaused
+                    }
+
+                    val formatSpec = if (task.selectedFormat.isOriginalAudio) {
+                        if (task.selectedFormat.formatId.isNotEmpty()) task.selectedFormat.formatId else "bestaudio/best"
+                    } else {
+                        "bestaudio[ext=m4a]/bestaudio/best"
+                    }
+
+                    val dlResult = downloadEngine.downloadStream(
+                        task.url,
+                        formatSpec,
+                        rawTempFile.absolutePath,
+                        audioListener
+                    )
+
+                    if (isCancelled) {
+                        handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
+                        return
+                    }
+
+                    if (dlResult.isFailure) {
+                        throw dlResult.exceptionOrNull() ?: Exception("Lỗi khi tải luồng âm thanh")
+                    }
+
+                    if (!task.selectedFormat.isOriginalAudio) {
+                        // Transcode to MP3 with chosen bitrate (128k, 192k, 256k, 320k)
+                        _currentTask.value = _currentTask.value?.copy(status = DownloadStatus.PROCESSING, progress = 85f)
+                        DownloadForegroundService.updateStatus(context, context.getString(R.string.notif_processing_title, task.title))
+
+                        val transcodeResult = mediaProcessor.transcodeToMp3(
+                            rawTempFile.absolutePath,
+                            processedFile.absolutePath,
+                            task.selectedFormat.bitrateKbps,
+                            onProgress = { }
+                        )
+
+                        rawTempFile.delete()
+
+                        if (transcodeResult.isFailure) {
+                            processedFile.delete()
+                            throw transcodeResult.exceptionOrNull() ?: Exception("Lỗi chuyển đổi MP3")
+                        }
+                        finalFileToPublish = processedFile
+                    } else {
+                        finalFileToPublish = rawTempFile
+                    }
                 }
 
                 // Saving stage (MediaStore Scoped Storage)
-                _currentTask.value = _currentTask.value?.copy(status = DownloadStatus.SAVING)
+                _currentTask.value = _currentTask.value?.copy(status = DownloadStatus.SAVING, progress = 99f)
 
                 val mimeType = when {
                     task.selectedFormat.isVideo -> "video/mp4"
                     task.selectedFormat.isOriginalAudio -> "audio/${task.selectedFormat.ext}"
                     else -> "audio/mpeg"
                 }
+
+                val finalFileSize = finalFileToPublish.length().coerceAtLeast(1L)
 
                 val mediaStoreUriResult = storageRepository.saveToMediaStore(
                     tempFile = finalFileToPublish,
@@ -234,11 +396,16 @@ class DownloadCoordinator(
                     fileName = task.outputFilename,
                     mimeType = mimeType,
                     isAudio = !task.selectedFormat.isVideo,
-                    fileSize = finalFileToPublish.length(),
+                    fileSize = finalFileSize,
                     durationSeconds = metadata.durationSeconds,
                     thumbnailUri = metadata.thumbnail
                 )
                 historyRepository.addRecord(historyEntity)
+
+                // Clean up final temporary file if still existing
+                if (finalFileToPublish.exists()) {
+                    finalFileToPublish.delete()
+                }
 
                 _currentTask.value = _currentTask.value?.copy(
                     status = DownloadStatus.COMPLETED,
@@ -250,7 +417,7 @@ class DownloadCoordinator(
 
             } catch (e: Exception) {
                 if (isCancelled) {
-                    handleCancellation(rawTempFile, processedFile)
+                    handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
                     return
                 }
 
@@ -268,8 +435,7 @@ class DownloadCoordinator(
                         errorMessage = e.localizedMessage ?: "Tải thất bại"
                     )
                     DownloadForegroundService.notifyComplete(context, task.title, false)
-                    rawTempFile.delete()
-                    processedFile.delete()
+                    handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
                 }
             }
         }

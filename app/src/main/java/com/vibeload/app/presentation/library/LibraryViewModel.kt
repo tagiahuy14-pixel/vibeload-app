@@ -164,4 +164,18 @@ class LibraryViewModel(
             _uiState.update { it.copy(infoMessage = "Không tìm thấy ứng dụng phù hợp để mở tệp") }
         }
     }
+
+    fun openContainingFolder(context: Context, item: HistoryEntity) {
+        try {
+            val uri = Uri.parse(item.mediaUriString)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, item.mimeType)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(Intent.createChooser(intent, "Mở tệp / thư mục"))
+        } catch (e: Exception) {
+            _uiState.update { it.copy(infoMessage = "Không thể mở thư mục") }
+        }
+    }
 }

@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -45,16 +46,26 @@ fun AppNavigation(
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF0B0F19),
+                    tonalElevation = 8.dp
+                ) {
                     bottomNavItems.forEach { screen ->
                         val selected = currentRoute == screen.route
                         NavigationBarItem(
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = androidx.compose.ui.graphics.Color.White,
+                                selectedTextColor = androidx.compose.ui.graphics.Color(0xFF60A5FA),
+                                unselectedIconColor = androidx.compose.ui.graphics.Color(0xFF64748B),
+                                unselectedTextColor = androidx.compose.ui.graphics.Color(0xFF64748B),
+                                indicatorColor = androidx.compose.ui.graphics.Color(0xFF1D4ED8)
+                            ),
                             icon = {
                                 if (screen == Screen.Downloading && isDownloadActive) {
                                     BadgedBox(
                                         badge = {
-                                            Badge {
-                                                Text("1")
+                                            Badge(containerColor = androidx.compose.ui.graphics.Color(0xFF3B82F6)) {
+                                                Text("1", color = androidx.compose.ui.graphics.Color.White)
                                             }
                                         }
                                     ) {
@@ -64,7 +75,7 @@ fun AppNavigation(
                                     Icon(screen.icon, contentDescription = screen.title)
                                 }
                             },
-                            label = { Text(screen.title) },
+                            label = { Text(screen.title, fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal) },
                             selected = selected,
                             onClick = {
                                 if (currentRoute != screen.route) {
@@ -91,12 +102,29 @@ fun AppNavigation(
             composable(Screen.Home.route) {
                 HomeScreen(
                     viewModel = homeViewModel,
+                    libraryViewModel = libraryViewModel,
                     onNavigateToDownloading = {
                         navController.navigate(Screen.Downloading.route) {
                             popUpTo(Screen.Home.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onPlayMedia = { item ->
+                        navController.navigate(
+                            Screen.Player.createRoute(
+                                mediaUri = item.mediaUriString,
+                                title = item.title.ifBlank { item.fileName },
+                                isAudio = item.isAudio
+                            )
+                        )
                     }
                 )
             }
@@ -146,15 +174,15 @@ fun AppNavigation(
                 val isAudio = backStackEntry.arguments?.getBoolean("isAudio") ?: false
 
                 val mediaUri = try {
-                    URLDecoder.decode(encodedUri, "UTF-8")
+                    String(java.util.Base64.getUrlDecoder().decode(encodedUri), Charsets.UTF_8)
                 } catch (e: Exception) {
-                    encodedUri
+                    try { URLDecoder.decode(encodedUri, "UTF-8") } catch (_: Exception) { encodedUri }
                 }
 
                 val title = try {
-                    URLDecoder.decode(encodedTitle, "UTF-8")
+                    String(java.util.Base64.getUrlDecoder().decode(encodedTitle), Charsets.UTF_8)
                 } catch (e: Exception) {
-                    encodedTitle
+                    try { URLDecoder.decode(encodedTitle, "UTF-8") } catch (_: Exception) { encodedTitle }
                 }
 
                 PlayerScreen(
