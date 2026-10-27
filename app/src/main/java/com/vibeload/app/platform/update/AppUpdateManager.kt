@@ -72,6 +72,8 @@ class AppUpdateManager(
     private var sessionPostponedVersionCode: Int? = null
 
     companion object {
+        const val DEFAULT_GITHUB_OWNER = "vibeload"
+        const val DEFAULT_GITHUB_REPO = "vibeload-app"
         const val PREF_LAST_AUTO_CHECK = "last_auto_check_timestamp"
         const val PREF_LAST_POSTPONED_TIME = "last_postponed_timestamp"
         const val PREF_POSTPONED_VERSION = "last_postponed_version_code"
@@ -174,14 +176,24 @@ class AppUpdateManager(
         }
     }
 
+    fun getUpdateOwner(): String = prefs.getString("custom_update_owner", DEFAULT_GITHUB_OWNER) ?: DEFAULT_GITHUB_OWNER
+    fun getUpdateRepo(): String = prefs.getString("custom_update_repo", DEFAULT_GITHUB_REPO) ?: DEFAULT_GITHUB_REPO
+
+    fun setCustomRepo(owner: String, repo: String) {
+        prefs.edit()
+            .putString("custom_update_owner", owner.trim())
+            .putString("custom_update_repo", repo.trim())
+            .apply()
+    }
+
     /**
      * Check for updates from GitHub or manifest.
      * @param isAuto true if triggered on app start, false if user pressed button
      * @param force true to bypass 24h frequency limit
      */
     suspend fun checkForUpdates(
-        owner: String = "vibeload",
-        repo: String = "vibeload-app",
+        owner: String = getUpdateOwner(),
+        repo: String = getUpdateRepo(),
         isAuto: Boolean = false,
         force: Boolean = false
     ): Result<UpdateInfo> = withContext(Dispatchers.IO) {
