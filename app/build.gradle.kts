@@ -147,5 +147,12 @@ tasks.register<Exec>("publishRelease") {
     description = "Tu dong tao GitHub Release va tai app-release.apk len GitHub"
     dependsOn("assembleRelease")
     workingDir = rootDir
-    commandLine("python", "scripts/publish_release.py")
+    standardInput = System.`in`
+
+    val tokenProp = project.findProperty("githubToken") as? String
+    if (!tokenProp.isNullOrBlank()) {
+        commandLine("python", "scripts/publish_release.py", "--token", tokenProp)
+    } else {
+        commandLine("python", "scripts/publish_release.py")
+    }
 }
