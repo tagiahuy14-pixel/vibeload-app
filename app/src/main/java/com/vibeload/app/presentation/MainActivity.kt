@@ -227,6 +227,16 @@ class MainActivity : ComponentActivity() {
                                             color = Color(0xFFEF4444),
                                             fontSize = 12.sp
                                         )
+                                        if (prompt.errorMessage.contains("quyền", ignoreCase = true) || prompt.errorMessage.contains("Cho phép", ignoreCase = true)) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Button(
+                                                onClick = { container.appUpdateManager.openInstallPermissionSettings() },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text("Mở Cài đặt cấp quyền", color = Color.White, fontSize = 12.sp)
+                                            }
+                                        }
                                     }
                                 }
                             },

@@ -128,6 +128,7 @@ class ChaquopyDownloadEngine : DownloadEngine {
             }
 
             val isImageOnly = json.optBoolean("is_image_only", false) || (videoOptions.isEmpty() && imageOptions.isNotEmpty())
+            val postId = json.optString("id", "")
 
             val metadata = MediaMetadata(
                 url = url,
@@ -139,7 +140,8 @@ class ChaquopyDownloadEngine : DownloadEngine {
                 videoOptions = videoOptions,
                 audioOptions = audioOptions,
                 imageOptions = imageOptions,
-                isImageOnly = isImageOnly
+                isImageOnly = isImageOnly,
+                postId = postId
             )
 
             Result.success(metadata)

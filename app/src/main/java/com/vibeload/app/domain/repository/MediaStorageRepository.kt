@@ -14,7 +14,8 @@ interface MediaStorageRepository {
     suspend fun saveImageToMediaStore(
         tempFile: File,
         targetFilename: String,
-        mimeType: String
+        mimeType: String,
+        subfolder: String? = null
     ): Result<Uri>
 
     fun sanitizeFilename(rawTitle: String, extension: String): String

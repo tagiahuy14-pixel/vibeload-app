@@ -394,9 +394,16 @@ fun HomeScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         val imageOpt = uiState.selectedFormat ?: meta.imageOptions.firstOrNull()
-                                        val formatName = imageOpt?.ext?.uppercase() ?: "ẢNH"
+                                        val realCount = meta.imageOptions.count { it.formatId != "ALL_IMAGES" }
+                                        val contentLabel = if (meta.platform.equals("tiktok", ignoreCase = true)) {
+                                            if (realCount > 1) "Album ảnh TikTok ($realCount ảnh)" else "Ảnh TikTok"
+                                        } else if (realCount > 1) {
+                                            "Album ảnh ($realCount ảnh)"
+                                        } else {
+                                            "Ảnh (${imageOpt?.ext?.uppercase() ?: "JPG"})"
+                                        }
                                         Text(
-                                            text = "Loại nội dung: Ảnh ($formatName)",
+                                            text = "Loại: $contentLabel",
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.SemiBold,
                                             color = Color(0xFF38BDF8)
@@ -561,7 +568,14 @@ fun HomeScreen(
                         Icon(Icons.Default.Download, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (meta.isImageOnly || uiState.selectedFormat?.isImage == true) "Tải ảnh" else stringResource(R.string.home_download_button),
+                            text = if (uiState.selectedFormat?.formatId == "ALL_IMAGES") {
+                                val c = meta.imageOptions.count { it.formatId != "ALL_IMAGES" }
+                                "Tải tất cả ảnh ($c)"
+                            } else if (meta.isImageOnly || uiState.selectedFormat?.isImage == true) {
+                                "Tải ${uiState.selectedFormat?.label ?: "ảnh"}"
+                            } else {
+                                stringResource(R.string.home_download_button)
+                            },
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = Color.White

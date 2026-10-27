@@ -10,7 +10,8 @@ data class MediaMetadata(
     val videoOptions: List<FormatOption>,
     val audioOptions: List<FormatOption>,
     val imageOptions: List<FormatOption> = emptyList(),
-    val isImageOnly: Boolean = false
+    val isImageOnly: Boolean = false,
+    val postId: String = ""
 ) {
     fun getFormattedDuration(): String {
         if (durationSeconds <= 0) return "--:--"

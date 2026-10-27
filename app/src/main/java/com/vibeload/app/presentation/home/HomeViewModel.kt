@@ -145,7 +145,21 @@ class HomeViewModel(
             // Step 2: Attempt standard media extraction (video / audio from YouTube, TikTok, Facebook, etc.)
             val result = downloadEngine.analyzeUrl(url)
             if (result.isSuccess) {
-                val meta = result.getOrThrow()
+                var meta = result.getOrThrow()
+                if (meta.isImageOnly && meta.imageOptions.size > 1) {
+                    val allImagesOption = FormatOption(
+                        formatId = "ALL_IMAGES",
+                        label = "Tải tất cả (${meta.imageOptions.size} ảnh)",
+                        resolution = "${meta.imageOptions.size} ảnh",
+                        ext = meta.imageOptions.firstOrNull()?.ext ?: "jpg",
+                        filesize = meta.imageOptions.sumOf { it.filesize },
+                        isVideo = false,
+                        isImage = true,
+                        mimeType = "image/jpeg"
+                    )
+                    meta = meta.copy(imageOptions = listOf(allImagesOption) + meta.imageOptions)
+                }
+
                 val defaultFmt = if (meta.isImageOnly) {
                     meta.imageOptions.firstOrNull() ?: meta.audioOptions.firstOrNull()
                 } else {

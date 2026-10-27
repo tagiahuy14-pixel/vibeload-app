@@ -13,7 +13,10 @@ data class DownloadTask(
     val totalBytes: Long = 0L,
     val etaSeconds: Long = 0L,
     val errorMessage: String? = null,
-    val retryCount: Int = 0
+    val retryCount: Int = 0,
+    val currentItemIndex: Int = 0,
+    val totalItemCount: Int = 0,
+    val statusMessage: String? = null
 ) {
     fun getFormattedSpeed(): String {
         if (speedBytesPerSec <= 0f) return "0 KB/s"
@@ -26,6 +29,9 @@ data class DownloadTask(
     }
 
     fun getFormattedSizeProgress(): String {
+        if (totalItemCount > 1) {
+            return if (currentItemIndex > 0) "$currentItemIndex/$totalItemCount ảnh" else "$totalItemCount ảnh"
+        }
         val dlMb = downloadedBytes / (1024.0 * 1024.0)
         return if (totalBytes > 0) {
             val totalMb = totalBytes / (1024.0 * 1024.0)

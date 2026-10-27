@@ -1,4 +1,5 @@
 import base64
+import http.cookiejar
 import json
 import os
 import re
@@ -131,7 +132,7 @@ def format_error_message(err_str, url=""):
 
     # 3. TikTok Photo / Slideshow Album
     if "/photo/" in url_lower or ("tiktok" in url_lower and ("photo" in err_lower or "unsupported url" in err_lower)):
-        return "Liên kết này là bài đăng album ảnh (Photo Slide) của TikTok. VibeLoad hiện hỗ trợ tải các bài đăng Video TikTok. Vui lòng chọn bài viết định dạng video."
+        return "Không thể tải album ảnh TikTok này. Bài viết có thể ở chế độ riêng tư, đã bị xóa hoặc TikTok đang yêu cầu xác minh bảo mật."
 
     # 4. Facebook Private / Closed Group / Login Wall
     if "cannot parse data" in err_lower or ("facebook" in url_lower and ("login" in err_lower or "unsupported url" in err_lower or "report this issue" in err_lower)):
@@ -218,8 +219,10 @@ def extract_tiktok_via_tikwm(url):
                         "acodec": "mp3"
                     })
 
+                item_id = str(d.get("id") or "")
                 return {
                     "success": True,
+                    "id": item_id,
                     "url": url,
                     "title": title,
                     "thumbnail": image_options[0]["format_id"],
@@ -240,8 +243,10 @@ def extract_tiktok_photos_direct(url):
     Extract photo slideshow images and background music from TikTok photo posts via direct HTML parsing.
     """
     try:
+        cj = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         req = urllib.request.Request(url, headers=DEFAULT_HEADERS)
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with opener.open(req, timeout=15) as resp:
             final_url = resp.geturl()
             html = resp.read().decode('utf-8', errors='ignore')
 
@@ -275,6 +280,7 @@ def extract_tiktok_photos_direct(url):
         if not images:
             return None
 
+        item_id = str(item.get("id") or "")
         desc = item.get('desc') or 'TikTok Ảnh'
         author = item.get('author', {}).get('nickname') or item.get('author', {}).get('uniqueId') or 'TikTok'
 
@@ -310,6 +316,7 @@ def extract_tiktok_photos_direct(url):
 
         return {
             "success": True,
+            "id": item_id,
             "url": final_url,
             "title": desc,
             "thumbnail": first_thumb,
@@ -417,8 +424,8 @@ def analyze_url(url):
     clean_url = clean_and_normalize_url(url)
     clean_url = resolve_redirect_if_needed(clean_url)
 
-    # For TikTok photo posts, attempt photo extraction first
-    if "/photo/" in clean_url.lower():
+    # For TikTok photo posts or shortlinks, attempt photo extraction first
+    if "/photo/" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "vm.tiktok.com" in clean_url.lower():
         tiktok_photo_res = extract_tiktok_photos(clean_url)
         if tiktok_photo_res:
             return json.dumps(tiktok_photo_res)

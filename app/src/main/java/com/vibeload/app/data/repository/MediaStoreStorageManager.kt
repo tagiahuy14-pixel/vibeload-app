@@ -123,7 +123,8 @@ class MediaStoreStorageManager(
     override suspend fun saveImageToMediaStore(
         tempFile: File,
         targetFilename: String,
-        mimeType: String
+        mimeType: String,
+        subfolder: String?
     ): Result<Uri> = withContext(Dispatchers.IO) {
         try {
             if (!tempFile.exists() || tempFile.length() == 0L) {
@@ -136,7 +137,11 @@ class MediaStoreStorageManager(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             }
 
-            val relativePath = "Pictures/VibeLoad"
+            val relativePath = if (!subfolder.isNullOrBlank()) {
+                "Pictures/VibeLoad/$subfolder"
+            } else {
+                "Pictures/VibeLoad"
+            }
             val uniqueDisplayName = resolveUniqueDisplayNameForCollection(
                 targetFilename,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,

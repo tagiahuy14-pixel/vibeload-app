@@ -73,6 +73,9 @@ class DownloadCoordinator(
         }
         val safeName = storageRepository.sanitizeFilename(customFilename, extension)
 
+        val isBatchAlbum = selectedFormat.isImage && (selectedFormat.formatId == "ALL_IMAGES" || selectedFormat.label.contains("Tải tất cả", ignoreCase = true))
+        val totalCount = if (isBatchAlbum) metadata.imageOptions.size else 1
+
         val task = DownloadTask(
             id = taskId,
             url = url,
@@ -80,7 +83,9 @@ class DownloadCoordinator(
             outputFilename = safeName,
             selectedFormat = selectedFormat,
             status = DownloadStatus.RESOLVING,
-            totalBytes = selectedFormat.filesize
+            totalBytes = selectedFormat.filesize,
+            currentItemIndex = 1,
+            totalItemCount = totalCount
         )
 
         _currentTask.value = task
@@ -131,55 +136,152 @@ class DownloadCoordinator(
                 val finalFileToPublish: File
 
                 if (task.selectedFormat.isImage) {
-                    val imageListener = object : DownloadProgressListener {
-                        override fun onProgress(
-                            percent: Float,
-                            speed: Float,
-                            downloadedBytes: Long,
-                            totalBytes: Long,
-                            etaSeconds: Long
-                        ) {
-                            _currentTask.value = _currentTask.value?.copy(
-                                progress = percent,
-                                speedBytesPerSec = speed,
-                                downloadedBytes = downloadedBytes,
-                                totalBytes = if (totalBytes > 0) totalBytes else task.totalBytes,
-                                etaSeconds = etaSeconds
-                            )
-                            DownloadForegroundService.updateProgress(
-                                context,
-                                task.title,
-                                percent.toInt(),
-                                speed,
-                                false
-                            )
+                    val isBatchAlbum = task.selectedFormat.formatId == "ALL_IMAGES" ||
+                            task.selectedFormat.label.contains("Tải tất cả", ignoreCase = true)
+
+                    val imagesToDownload = if (isBatchAlbum) {
+                        metadata.imageOptions.ifEmpty { listOf(task.selectedFormat) }
+                    } else {
+                        listOf(task.selectedFormat)
+                    }
+
+                    val totalImages = imagesToDownload.size
+                    val postId = metadata.postId.ifEmpty {
+                        val match = Regex("/photo/(\\d+)").find(metadata.url)
+                        match?.groupValues?.get(1) ?: task.id.take(8)
+                    }
+                    val subfolder = if (metadata.platform.equals("tiktok", ignoreCase = true)) {
+                        "TikTok_$postId"
+                    } else if (totalImages > 1) {
+                        "Album_$postId"
+                    } else {
+                        null
+                    }
+
+                    for ((idx, imgOption) in imagesToDownload.withIndex()) {
+                        if (isCancelled) {
+                            handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
+                            return
                         }
 
-                        override fun isCancelled(): Boolean = isCancelled || isPaused
+                        val currentIdx = idx + 1
+                        _currentTask.value = _currentTask.value?.copy(
+                            status = DownloadStatus.DOWNLOADING,
+                            currentItemIndex = currentIdx,
+                            totalItemCount = totalImages,
+                            statusMessage = if (totalImages > 1) "Đang tải $currentIdx/$totalImages ảnh..." else "Đang tải ảnh..."
+                        )
+
+                        val imgTempFile = File(tempDir, "temp_img_${task.id}_$currentIdx.${imgOption.ext.ifEmpty { "jpg" }}")
+                        val imageListener = object : DownloadProgressListener {
+                            override fun onProgress(
+                                percent: Float,
+                                speed: Float,
+                                downloadedBytes: Long,
+                                totalBytes: Long,
+                                etaSeconds: Long
+                            ) {
+                                val overallPercent = if (totalImages > 1) {
+                                    (((idx.toFloat() + (percent / 100f).coerceIn(0f, 1f)) / totalImages) * 100f).coerceIn(0f, 100f)
+                                } else {
+                                    percent
+                                }
+                                _currentTask.value = _currentTask.value?.copy(
+                                    progress = overallPercent,
+                                    speedBytesPerSec = speed,
+                                    downloadedBytes = downloadedBytes,
+                                    totalBytes = if (totalBytes > 0) totalBytes else task.totalBytes,
+                                    etaSeconds = etaSeconds,
+                                    currentItemIndex = currentIdx,
+                                    totalItemCount = totalImages,
+                                    statusMessage = if (totalImages > 1) "Đang tải $currentIdx/$totalImages ảnh (${overallPercent.toInt()}%)" else "Đang tải ảnh..."
+                                )
+                                DownloadForegroundService.updateProgress(
+                                    context,
+                                    task.title,
+                                    overallPercent.toInt(),
+                                    speed,
+                                    false
+                                )
+                            }
+
+                            override fun isCancelled(): Boolean = isCancelled || isPaused
+                        }
+
+                        val targetImageUrl = if (imgOption.formatId.startsWith("http")) {
+                            imgOption.formatId
+                        } else {
+                            task.url
+                        }
+
+                        val imgResult = imageDownloader.downloadImage(
+                            url = targetImageUrl,
+                            targetTempFile = imgTempFile,
+                            progressListener = imageListener
+                        )
+
+                        if (isCancelled) {
+                            if (imgTempFile.exists()) imgTempFile.delete()
+                            handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
+                            return
+                        }
+
+                        if (imgResult.isFailure) {
+                            if (imgTempFile.exists()) imgTempFile.delete()
+                            throw imgResult.exceptionOrNull() ?: Exception("Lỗi khi tải ảnh $currentIdx/$totalImages")
+                        }
+
+                        val detectedFormat = imgResult.getOrThrow()
+                        val ext = detectedFormat.extension
+                        val mimeType = detectedFormat.mimeType
+
+                        val itemFilename = if (totalImages > 1) {
+                            val baseName = storageRepository.sanitizeFilename(task.outputFilename, "").removeSuffix(".")
+                            "${baseName}_$currentIdx.$ext"
+                        } else {
+                            task.outputFilename
+                        }
+
+                        val saveResult = storageRepository.saveImageToMediaStore(
+                            tempFile = imgTempFile,
+                            targetFilename = itemFilename,
+                            mimeType = mimeType,
+                            subfolder = subfolder
+                        )
+
+                        if (saveResult.isFailure) {
+                            throw saveResult.exceptionOrNull() ?: Exception("Lỗi lưu ảnh $currentIdx vào thư viện")
+                        }
+
+                        val publishedUri = saveResult.getOrThrow()
+
+                        val historyEntity = HistoryEntity(
+                            id = if (totalImages > 1) "${task.id}_$currentIdx" else task.id,
+                            title = if (totalImages > 1) "${task.title} (Ảnh $currentIdx/$totalImages)" else task.title,
+                            originalUrl = task.url,
+                            mediaUriString = publishedUri.toString(),
+                            relativePath = if (!subfolder.isNullOrBlank()) "Pictures/VibeLoad/$subfolder" else "Pictures/VibeLoad",
+                            fileName = itemFilename,
+                            mimeType = mimeType,
+                            isAudio = false,
+                            fileSize = imgTempFile.length().coerceAtLeast(1L),
+                            durationSeconds = 0,
+                            thumbnailUri = publishedUri.toString()
+                        )
+                        historyRepository.addRecord(historyEntity)
                     }
 
-                    val targetImageUrl = if (task.selectedFormat.formatId.startsWith("http")) {
-                        task.selectedFormat.formatId
-                    } else {
-                        task.url
-                    }
-
-                    val imgResult = imageDownloader.downloadImage(
-                        url = targetImageUrl,
-                        targetTempFile = rawTempFile,
-                        progressListener = imageListener
+                    // Complete batch image task
+                    _currentTask.value = _currentTask.value?.copy(
+                        status = DownloadStatus.COMPLETED,
+                        progress = 100f,
+                        currentItemIndex = totalImages,
+                        totalItemCount = totalImages,
+                        statusMessage = if (totalImages > 1) "Đã tải xong $totalImages/$totalImages ảnh" else "Đã tải xong ảnh"
                     )
-
-                    if (isCancelled) {
-                        handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
-                        return
-                    }
-
-                    if (imgResult.isFailure) {
-                        throw imgResult.exceptionOrNull() ?: Exception("Lỗi khi tải hình ảnh")
-                    }
-
-                    finalFileToPublish = rawTempFile
+                    val completeMsg = if (totalImages > 1) "Đã tải xong $totalImages ảnh vào Pictures/VibeLoad/${subfolder ?: ""}" else "Đã tải xong ảnh"
+                    DownloadForegroundService.updateStatus(context, completeMsg)
+                    return
                 } else if (task.selectedFormat.isVideo) {
                     if (task.selectedFormat.needsMerge) {
                         // Two-stage download: Video track + Audio track, then merge via FFmpegKit (in-process JNI)

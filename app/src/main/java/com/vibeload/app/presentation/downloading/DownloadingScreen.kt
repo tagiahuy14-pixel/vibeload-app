@@ -124,9 +124,9 @@ fun DownloadingScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Lưu file: ${task.outputFilename}",
+                        text = task.statusMessage ?: "Lưu file: ${task.outputFilename}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (task.statusMessage != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
