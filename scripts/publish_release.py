@@ -149,7 +149,7 @@ def api_request(url, method="GET", data=None, headers=None):
 
     req = urllib.request.Request(url, data=req_data, headers=req_headers, method=method)
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=300) as resp:
             content = resp.read()
             if content:
                 try:
@@ -259,7 +259,17 @@ def main():
         "Content-Type": "application/vnd.android.package-archive",
         "Content-Length": str(len(apk_bytes))
     }
-    upload_res, upload_status = api_request(clean_upload_url, method="POST", data=apk_bytes, headers=upload_headers)
+
+    upload_res = None
+    upload_status = None
+    for attempt in range(1, 4):
+        if attempt > 1:
+            print(f"[RETRY] Thu tai len lai lan {attempt}/3...")
+            time.sleep(3)
+        upload_res, upload_status = api_request(clean_upload_url, method="POST", data=apk_bytes, headers=upload_headers)
+        if upload_status in (200, 201):
+            break
+        print(f"[WARN] Lan {attempt} that bai (HTTP {upload_status}): {upload_res.get('error') if isinstance(upload_res, dict) else upload_res}")
 
     if upload_status in (200, 201):
         print("\n" + "=" * 60)
