@@ -290,10 +290,12 @@ class AppUpdateManager(
 
             val (currentCode, currentName) = getAppPackageInfo()
             val remoteVersionName = tagName.removePrefix("v").trim()
-            val remoteVersionCode = manifestVersionCode ?: parseVersionCodeFromTag(tagName)
+            val isSemverNewer = isNewerVersion(remoteVersionName, currentName)
+            val isCodeNewer = manifestVersionCode != null && manifestVersionCode > currentCode
+            val remoteVersionCode = manifestVersionCode ?: if (isSemverNewer) (currentCode + 1) else currentCode
 
-            // CRITICAL RULE: remoteVersionCode MUST be greater than currentCode
-            val hasUpdate = (remoteVersionCode > currentCode) && apkUrl.isNotEmpty()
+            // CRITICAL RULE: Version must be genuinely newer semantically or by manifest versionCode
+            val hasUpdate = (isSemverNewer || isCodeNewer) && apkUrl.isNotEmpty()
 
             // Update successful auto-check timestamp only when we actually contacted the server
             prefs.edit().putLong(PREF_LAST_AUTO_CHECK, System.currentTimeMillis()).apply()
@@ -488,15 +490,18 @@ class AppUpdateManager(
                 return Result.failure(Exception("Tên gói APK (${archiveInfo.packageName}) không khớp với $expectedPackageName"))
             }
 
+            val (currentCode, currentName) = getAppPackageInfo()
             val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 archiveInfo.longVersionCode.toInt()
             } else {
                 @Suppress("DEPRECATION")
                 archiveInfo.versionCode
             }
+            val archiveVersionName = archiveInfo.versionName ?: ""
 
-            if (code < expectedMinVersionCode) {
-                return Result.failure(Exception("Mã phiên bản APK ($code) thấp hơn phiên bản yêu cầu ($expectedMinVersionCode)"))
+            // Ensure downloaded APK is at least equal to or newer than current installation
+            if (code < currentCode && !isNewerVersion(archiveVersionName, currentName)) {
+                return Result.failure(Exception("Mã phiên bản APK ($code) thấp hơn phiên bản đang cài đặt ($currentCode)"))
             }
         } catch (e: Exception) {
             // In unit test environment without real Android PackageManager, allow pass if test file

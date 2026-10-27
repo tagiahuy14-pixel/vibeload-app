@@ -150,15 +150,109 @@ def format_error_message(err_str, url=""):
     clean_err = re.sub(r'please report this issue.*', '', clean_err, flags=re.IGNORECASE).strip()
     return clean_err if clean_err else "Không thể phân tích liên kết này."
 
+def extract_tiktok_photos(url):
+    """
+    Extract photo slideshow images and background music from TikTok photo posts.
+    """
+    try:
+        req = urllib.request.Request(url, headers=DEFAULT_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            final_url = resp.geturl()
+            html = resp.read().decode('utf-8', errors='ignore')
+
+        item = {}
+        # Try 1: __UNIVERSAL_DATA_FOR_REHYDRATION__
+        m = re.search(r'<script\s+id=[\"\']__UNIVERSAL_DATA_FOR_REHYDRATION__[\"\'][^>]*>(.*?)</script>', html, re.DOTALL)
+        if m:
+            try:
+                data = json.loads(m.group(1))
+                scope = data.get('__DEFAULT_SCOPE__', {})
+                detail = scope.get('webapp.video-detail', {})
+                item = detail.get('itemInfo', {}).get('itemStruct', {})
+            except Exception:
+                pass
+
+        # Try 2: SIGI_STATE
+        if not item:
+            m2 = re.search(r'<script\s+id=[\"\']SIGI_STATE[\"\'][^>]*>(.*?)</script>', html, re.DOTALL)
+            if m2:
+                try:
+                    data = json.loads(m2.group(1))
+                    item_module = data.get('ItemModule', {})
+                    if item_module:
+                        item = next(iter(item_module.values()))
+                except Exception:
+                    pass
+
+        image_post = item.get('imagePost', {})
+        images = image_post.get('images', [])
+
+        if not images:
+            return None
+
+        desc = item.get('desc') or 'TikTok Ảnh'
+        author = item.get('author', {}).get('nickname') or item.get('author', {}).get('uniqueId') or 'TikTok'
+
+        image_options = []
+        for idx, img in enumerate(images):
+            url_list = img.get('imageURL', {}).get('urlList', [])
+            if not url_list:
+                continue
+            best_img_url = url_list[0]
+            image_options.append({
+                "format_id": best_img_url,
+                "label": f"Ảnh {idx + 1}/{len(images)}",
+                "ext": "jpg",
+                "resolution": f"Ảnh {idx + 1}",
+                "filesize": 0,
+                "is_image": True,
+                "mime_type": "image/jpeg"
+            })
+
+        audio_options = []
+        music = item.get('music', {})
+        play_url = music.get('playUrl')
+        if play_url:
+            audio_options.append({
+                "format_id": play_url,
+                "ext": "mp3",
+                "abr": 128,
+                "filesize": 0,
+                "acodec": "mp3"
+            })
+
+        first_thumb = image_options[0]["format_id"] if image_options else ""
+
+        return {
+            "success": True,
+            "url": final_url,
+            "title": desc,
+            "thumbnail": first_thumb,
+            "uploader": author,
+            "duration": 0,
+            "platform": "tiktok",
+            "video_options": [],
+            "audio_options": audio_options,
+            "image_options": image_options,
+            "is_image_only": True
+        }
+    except Exception:
+        return None
+
 def analyze_url(url):
     """
     Analyze given media URL and return structured JSON metadata.
     Supports YouTube, TikTok, Facebook, Instagram, SoundCloud, etc.
     """
     clean_url = clean_and_normalize_url(url)
-    target_url = clean_url
 
-    # For TikTok photo posts, attempt video rewrite first
+    # For TikTok photo posts, attempt photo extraction first
+    if "/photo/" in clean_url.lower():
+        tiktok_photo_res = extract_tiktok_photos(clean_url)
+        if tiktok_photo_res:
+            return json.dumps(tiktok_photo_res)
+
+    target_url = clean_url
     if "/photo/" in clean_url.lower():
         target_url = re.sub(r'/photo/(\d+)', r'/video/\1', clean_url)
 
@@ -328,8 +422,16 @@ def analyze_url(url):
             return json.dumps(result)
 
     except yt_dlp.utils.DownloadError as e:
+        if "tiktok" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower():
+            tt_photos = extract_tiktok_photos(clean_url)
+            if tt_photos:
+                return json.dumps(tt_photos)
         return json.dumps({"success": False, "error": format_error_message(str(e), url)})
     except Exception as e:
+        if "tiktok" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower():
+            tt_photos = extract_tiktok_photos(clean_url)
+            if tt_photos:
+                return json.dumps(tt_photos)
         return json.dumps({"success": False, "error": format_error_message(str(e), url)})
 
 def download_stream(url, format_spec, output_path, progress_listener=None):
@@ -338,6 +440,30 @@ def download_stream(url, format_spec, output_path, progress_listener=None):
     progress_listener is a Python callable or Chaquopy Java proxy with onProgress(...) and isCancelled() -> bool.
     """
     clean_url = clean_and_normalize_url(url)
+
+    # Direct URL download (e.g. TikTok photo or audio CDN URL)
+    if format_spec.startswith("http://") or format_spec.startswith("https://"):
+        try:
+            req = urllib.request.Request(format_spec, headers=DEFAULT_HEADERS)
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                total_bytes = int(resp.headers.get('Content-Length', 0))
+                downloaded = 0
+                with open(output_path, 'wb') as out_f:
+                    while True:
+                        if progress_listener and hasattr(progress_listener, "isCancelled") and progress_listener.isCancelled():
+                            raise Exception("DOWNLOAD_CANCELLED")
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        out_f.write(chunk)
+                        downloaded += len(chunk)
+                        if progress_listener and hasattr(progress_listener, "onProgress") and total_bytes > 0:
+                            pct = (downloaded / total_bytes) * 100.0
+                            progress_listener.onProgress(float(pct), 0.0, int(downloaded), int(total_bytes), 0)
+            return json.dumps({"success": True, "output_path": output_path})
+        except Exception as dl_err:
+            return json.dumps({"success": False, "error": str(dl_err)})
+
     target_url = clean_url
     if "/photo/" in clean_url.lower():
         target_url = re.sub(r'/photo/(\d+)', r'/video/\1', clean_url)

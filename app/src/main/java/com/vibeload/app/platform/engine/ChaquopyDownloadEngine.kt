@@ -104,6 +104,31 @@ class ChaquopyDownloadEngine : DownloadEngine {
                 )
             }
 
+            // Parse image options if available (e.g. TikTok Photo Slides or platform images)
+            val imageOptions = mutableListOf<FormatOption>()
+            val rawImageArray = json.optJSONArray("image_options")
+            if (rawImageArray != null) {
+                for (i in 0 until rawImageArray.length()) {
+                    val obj = rawImageArray.getJSONObject(i)
+                    imageOptions.add(
+                        FormatOption(
+                            formatId = obj.optString("format_id"),
+                            label = obj.optString("label", "Ảnh ${i + 1}"),
+                            resolution = obj.optString("resolution", "Gốc"),
+                            height = obj.optInt("height", 0),
+                            width = obj.optInt("width", 0),
+                            ext = obj.optString("ext", "jpg"),
+                            filesize = obj.optLong("filesize", 0L),
+                            isVideo = false,
+                            isImage = true,
+                            mimeType = obj.optString("mime_type", "image/jpeg")
+                        )
+                    )
+                }
+            }
+
+            val isImageOnly = json.optBoolean("is_image_only", false) || (videoOptions.isEmpty() && imageOptions.isNotEmpty())
+
             val metadata = MediaMetadata(
                 url = url,
                 title = title,
@@ -112,7 +137,9 @@ class ChaquopyDownloadEngine : DownloadEngine {
                 durationSeconds = duration,
                 platform = platform,
                 videoOptions = videoOptions,
-                audioOptions = audioOptions
+                audioOptions = audioOptions,
+                imageOptions = imageOptions,
+                isImageOnly = isImageOnly
             )
 
             Result.success(metadata)

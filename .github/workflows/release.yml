@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-release:
@@ -51,7 +55,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          draft: true
+          draft: false
           prerelease: false
           name: "VibeLoad ${{ github.ref_name }}"
           body: |
@@ -63,7 +67,8 @@ jobs:
             ### Điểm nổi bật:
             - 100% On-Device, không server backend trung gian.
             - Hỗ trợ tải Video MP4 và Âm thanh MP3 chất lượng cao.
-            - Phân tích và tải trực tiếp từ 5 nền tảng: YouTube, TikTok, Facebook, Instagram, SoundCloud.
+            - Hỗ trợ tải Ảnh đa định dạng (JPG, PNG, WebP, GIF hoạt ảnh, AVIF, BMP, TIFF, HEIC, SVG, ICO).
+            - Phân tích và tải trực tiếp từ nhiều nguồn: YouTube, TikTok, Facebook, Instagram, SoundCloud và liên kết trực tiếp.
             - Hỗ trợ tải nền qua Android Foreground Service.
             - Thư viện quản lý tệp và Trình phát tích hợp (Media3 ExoPlayer).
           files: |

@@ -146,9 +146,14 @@ class HomeViewModel(
             val result = downloadEngine.analyzeUrl(url)
             if (result.isSuccess) {
                 val meta = result.getOrThrow()
-                val defaultFmt = meta.videoOptions.firstOrNull { it.height == 720 }
-                    ?: meta.videoOptions.lastOrNull()
-                    ?: meta.audioOptions.firstOrNull()
+                val defaultFmt = if (meta.isImageOnly) {
+                    meta.imageOptions.firstOrNull() ?: meta.audioOptions.firstOrNull()
+                } else {
+                    meta.videoOptions.firstOrNull { it.height == 720 }
+                        ?: meta.videoOptions.lastOrNull()
+                        ?: meta.audioOptions.firstOrNull()
+                        ?: meta.imageOptions.firstOrNull()
+                }
 
                 val defaultExt = defaultFmt?.ext ?: "mp4"
                 val sanitizedName = storageRepository.sanitizeFilename(meta.title, defaultExt)

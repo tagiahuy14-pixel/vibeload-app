@@ -63,3 +63,7 @@ __pycache__/
 Thumbs.db
 *.swp
 *.bak
+
+# Secrets & GitHub Tokens
+.github_token
+*.token

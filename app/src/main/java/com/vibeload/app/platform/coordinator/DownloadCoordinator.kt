@@ -158,8 +158,14 @@ class DownloadCoordinator(
                         override fun isCancelled(): Boolean = isCancelled || isPaused
                     }
 
+                    val targetImageUrl = if (task.selectedFormat.formatId.startsWith("http")) {
+                        task.selectedFormat.formatId
+                    } else {
+                        task.url
+                    }
+
                     val imgResult = imageDownloader.downloadImage(
-                        url = task.url,
+                        url = targetImageUrl,
                         targetTempFile = rawTempFile,
                         progressListener = imageListener
                     )

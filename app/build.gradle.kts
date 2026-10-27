@@ -141,3 +141,11 @@ dependencies {
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
+
+tasks.register<Exec>("publishRelease") {
+    group = "publishing"
+    description = "Tu dong tao GitHub Release va tai app-release.apk len GitHub"
+    dependsOn("assembleRelease")
+    workingDir = rootDir
+    commandLine("python", "scripts/publish_release.py")
+}
