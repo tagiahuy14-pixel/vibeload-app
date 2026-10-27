@@ -72,7 +72,7 @@ class AppUpdateManager(
     private var sessionPostponedVersionCode: Int? = null
 
     companion object {
-        const val DEFAULT_GITHUB_OWNER = "vibeload"
+        const val DEFAULT_GITHUB_OWNER = "tagiahuy14-pixel"
         const val DEFAULT_GITHUB_REPO = "vibeload-app"
         const val PREF_LAST_AUTO_CHECK = "last_auto_check_timestamp"
         const val PREF_LAST_POSTPONED_TIME = "last_postponed_timestamp"
