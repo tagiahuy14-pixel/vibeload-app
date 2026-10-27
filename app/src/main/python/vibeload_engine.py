@@ -170,9 +170,74 @@ def format_error_message(err_str, url=""):
     clean_err = re.sub(r'please report this issue.*', '', clean_err, flags=re.IGNORECASE).strip()
     return clean_err if clean_err else "Không thể phân tích liên kết này."
 
-def extract_tiktok_photos(url):
+def extract_tiktok_via_tikwm(url):
     """
-    Extract photo slideshow images and background music from TikTok photo posts.
+    Secondary fallback for TikTok photo carousels/slides via TikWM API.
+    """
+    try:
+        data = urllib.parse.urlencode({"url": url, "hd": 1}).encode("utf-8")
+        req = urllib.request.Request(
+            "https://www.tikwm.com/api/",
+            data=data,
+            headers={
+                "User-Agent": DEFAULT_HEADERS["User-Agent"],
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            res = json.loads(resp.read().decode("utf-8"))
+            if res.get("code") == 0 and "data" in res:
+                d = res["data"]
+                images = d.get("images", [])
+                if not images:
+                    return None
+
+                title = d.get("title") or "TikTok Ảnh"
+                author = d.get("author", {}).get("nickname") or d.get("author", {}).get("unique_id") or "TikTok"
+                music_url = d.get("music") or d.get("play")
+
+                image_options = []
+                for idx, img_url in enumerate(images):
+                    image_options.append({
+                        "format_id": img_url,
+                        "label": f"Ảnh {idx + 1}/{len(images)}",
+                        "ext": "jpg",
+                        "resolution": f"Ảnh {idx + 1}",
+                        "filesize": 0,
+                        "is_image": True,
+                        "mime_type": "image/jpeg"
+                    })
+
+                audio_options = []
+                if music_url:
+                    audio_options.append({
+                        "format_id": music_url,
+                        "ext": "mp3",
+                        "abr": 128,
+                        "filesize": 0,
+                        "acodec": "mp3"
+                    })
+
+                return {
+                    "success": True,
+                    "url": url,
+                    "title": title,
+                    "thumbnail": image_options[0]["format_id"],
+                    "uploader": author,
+                    "duration": 0,
+                    "platform": "tiktok",
+                    "video_options": [],
+                    "audio_options": audio_options,
+                    "image_options": image_options,
+                    "is_image_only": True
+                }
+    except Exception:
+        pass
+    return None
+
+def extract_tiktok_photos_direct(url):
+    """
+    Extract photo slideshow images and background music from TikTok photo posts via direct HTML parsing.
     """
     try:
         req = urllib.request.Request(url, headers=DEFAULT_HEADERS)
@@ -259,13 +324,27 @@ def extract_tiktok_photos(url):
     except Exception:
         return None
 
+def extract_tiktok_photos(url):
+    """
+    Extract photo slideshow images and background music from TikTok photo posts.
+    Tries direct on-device HTML parsing first, then TikWM fallback.
+    """
+    direct_res = extract_tiktok_photos_direct(url)
+    if direct_res:
+        return direct_res
+    return extract_tiktok_via_tikwm(url)
+
 def extract_opengraph_media(url):
     """
     Fallback extractor for platforms (Facebook photos, articles, web pages)
     using OpenGraph metadata when yt-dlp fails or is unsupported.
     """
     try:
-        req = urllib.request.Request(url, headers=DEFAULT_HEADERS)
+        headers = dict(DEFAULT_HEADERS)
+        if "facebook" in url.lower() or "fb.watch" in url.lower() or "/share/" in url.lower():
+            headers["User-Agent"] = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=12) as resp:
             final_url = resp.geturl()
             html = resp.read().decode('utf-8', errors='ignore')
@@ -280,6 +359,10 @@ def extract_opengraph_media(url):
 
         img_url = og_img_match.group(1).replace('&amp;', '&')
         if not img_url.startswith('http'):
+            return None
+
+        # Filter out Facebook logos or placeholder icons
+        if "facebook_logo" in img_url.lower() or "static.xx.fbcdn.net/rsrc.php" in img_url.lower():
             return None
 
         # Check for og:title

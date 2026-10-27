@@ -5,6 +5,20 @@ Tất cả các thay đổi đáng chú ý của dự án **VibeLoad** sẽ đư
 
 ---
 
+## [1.0.4] - 2026-10-27
+
+### 🛡️ Khắc phục toàn diện quyền cài đặt APK (OTA) & Nâng cấp tải ảnh TikTok / Facebook
+
+- **Sửa lỗi quyền cài đặt OTA ("VibeLoad doesn't have permission to install items")**:
+  - Bổ sung quyền bắt buộc `REQUEST_INSTALL_PACKAGES` vào AndroidManifest.
+  - Tự động kiểm tra `packageManager.canRequestPackageInstalls()` và mở trang cài đặt hệ thống "Cho phép cài đặt từ nguồn này" nếu chưa được cấp quyền.
+- **Tích hợp TikWM API Fallback cho Album ảnh TikTok**:
+  - Tự động bóc tách trọn bộ ảnh slide TikTok chất lượng cao không watermark và nhạc nền MP3 ngay cả khi máy chủ TikTok trả về chuyển hướng hoặc xác minh bot.
+- **Nâng cấp Crawler Facebook OpenGraph**:
+  - Tự động vượt tường đăng nhập Facebook để trích xuất ảnh gốc chất lượng cao từ CDN `fbcdn.net`.
+
+---
+
 ## [1.0.3] - 2026-10-27
 
 ### ⚡ Cải tiến tải phương tiện & Tự động phát hành (Auto-Release)
