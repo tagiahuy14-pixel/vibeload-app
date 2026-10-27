@@ -195,10 +195,30 @@ def main():
     release_id = None
     upload_url_template = None
 
+    release_body = f"""## VibeLoad Phien ban {tag_name}
+
+### SHA-256 Checksum:
+`{sha256}`
+
+### Tinh nang & Thay doi moi:
+- **Ho tro tai anh da dinh dang**: JPG/JPEG, PNG, WebP, GIF hoat anh, AVIF, BMP, TIFF, HEIC, SVG vector, ICO.
+- **Ho tro tai album anh TikTok (Photo Slide)**: Tu dong boc tach toan bo anh chat luong cao va nhac nen MP3.
+- **Tu dong nhan dien lien ket Facebook & OpenGraph**: Ho tro link chia se facebook.com/share/, fb.watch va tai anh Facebook chat luong cao.
+- **Sua triet de co che OTA Update**: Khac phuc loi kiem tra versionCode giup cap nhat muot ma khong loi.
+- **Tu dong nhan dien Magic Bytes & chong gia mao**: Ngan chan luu ma loi HTML/JSON gia dang anh.
+- **Luu tru chuan Scoped Storage**: Luu tai thu muc cong khai `Pictures/VibeLoad`, co `IS_PENDING` an toan.
+- **Thu vien anh tich hop**: Xem anh, chia se, doi ten, xoa va mo thu muc.
+- **Duy tri day du chuc nang video & audio**: Tai MP4 full HD, DASH muxing, chuyen doi MP3 chat luong cao.
+"""
+
     if status_code == 200 and isinstance(release_data, dict) and "id" in release_data:
         print(f"[INFO] Da ton tai Release cho tag {tag_name} (ID: {release_data['id']}). Dang cap nhat tep APK...")
         release_id = release_data["id"]
         upload_url_template = release_data["upload_url"]
+
+        # Cap nhat thong tin Release body neu can
+        update_release_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/{release_id}"
+        api_request(update_release_url, method="PATCH", data={"body": release_body, "name": f"VibeLoad {tag_name}"}, headers=auth_header)
 
         # Xoa asset cu neu trung ten app-release.apk
         assets = release_data.get("assets", [])
@@ -210,22 +230,9 @@ def main():
     else:
         print(f"[INFO] Dang tao moi GitHub Release {tag_name}...")
         create_release_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases"
-        release_body = f"""## VibeLoad Phien ban {tag_name}
-
-### SHA-256 Checksum:
-`{sha256}`
-
-### Tinh nang & Thay doi moi:
-- **Ho tro tai anh da dinh dang**: JPG/JPEG, PNG, WebP, GIF hoat anh, AVIF, BMP, TIFF, HEIC, SVG vector, ICO.
-- **Ho tro tai album anh TikTok (Photo Slide)**: Tu dong boc tach anh chat luong cao va nhac nen.
-- **Tu dong nhan dien Magic Bytes & chong gia mao**: Ngan chan luu ma loi HTML/JSON gia dang anh.
-- **Luu tru chuan Scoped Storage**: Luu tai thu muc cong khai `Pictures/VibeLoad`, co `IS_PENDING` an toan.
-- **Thu vien anh tich hop**: Xem anh, chia se, doi ten, xoa va mo thu muc.
-- **Duy tri day du chuc nang video & audio**: Tai MP4 full HD, DASH muxing, chuyen doi MP3 chat luong cao.
-"""
         payload = {
             "tag_name": tag_name,
-            "target_commitish": "master",
+            "target_commitish": "main",
             "name": f"VibeLoad {tag_name}",
             "body": release_body,
             "draft": False,
