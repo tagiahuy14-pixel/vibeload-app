@@ -113,10 +113,11 @@ class SettingsViewModel(
                     appUpdateManager.showManualUpdatePrompt(info)
                 }
             } else {
+                val err = res.exceptionOrNull()?.localizedMessage ?: "Vui lòng kiểm tra kết nối mạng"
                 _uiState.update {
                     it.copy(
                         isCheckingUpdate = false,
-                        message = "Không thể kiểm tra bản cập nhật: Vui lòng kiểm tra kết nối mạng"
+                        message = "Không thể kiểm tra bản cập nhật: $err"
                     )
                 }
             }

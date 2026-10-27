@@ -215,19 +215,8 @@ class AppUpdateManager(
 
             val response = client.newCall(request).execute()
             if (!response.isSuccessful) {
-                // If remote repository has no releases yet
-                val (curCode, curName) = getAppPackageInfo()
-                return@withContext Result.success(
-                    UpdateInfo(
-                        hasUpdate = false,
-                        currentVersionCode = curCode,
-                        currentVersionName = curName,
-                        latestVersionCode = curCode,
-                        latestVersionName = curName,
-                        releaseNotesVi = "Bạn đang sử dụng phiên bản mới nhất.",
-                        downloadUrl = "",
-                        apkChecksum = null
-                    )
+                return@withContext Result.failure(
+                    Exception("Máy chủ cập nhật chưa có bản phát hành hoặc không phản hồi (HTTP ${response.code}).")
                 )
             }
 

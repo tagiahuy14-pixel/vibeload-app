@@ -1,0 +1,8 @@
+{
+  "versionCode": 2,
+  "versionName": "1.0.1",
+  "mandatory": false,
+  "sha256": "3682d68ef85711d47446b9b6ef44149b91de550afbcfa625ae346577fbb54013",
+  "downloadUrl": "https://github.com/vibeload/vibeload-app/releases/download/v1.0.1/app-release.apk",
+  "releaseNotes": "• Cập nhật giao diện mới Dark UI hiện đại chuẩn thiết kế.\n• Sửa lỗi phát phương tiện (Media Player Source error).\n• Khắc phục video tải về không có âm thanh (ghép tự động FFmpeg AAC).\n• Tự động chuẩn hóa link Threads, TikTok, Instagram, YouTube, Facebook và dịch lỗi thân thiện.\n• Tự động kiểm tra và nhắc nhở cập nhật trong ứng dụng."
+}

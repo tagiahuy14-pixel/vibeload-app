@@ -148,7 +148,7 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "VibeLoad v1.0.0",
+                        text = "VibeLoad v${uiState.appVersion.substringBefore(" ")}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
