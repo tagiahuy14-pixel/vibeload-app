@@ -8,7 +8,9 @@ data class MediaMetadata(
     val durationSeconds: Long,
     val platform: String,
     val videoOptions: List<FormatOption>,
-    val audioOptions: List<FormatOption>
+    val audioOptions: List<FormatOption>,
+    val imageOptions: List<FormatOption> = emptyList(),
+    val isImageOnly: Boolean = false
 ) {
     fun getFormattedDuration(): String {
         if (durationSeconds <= 0) return "--:--"

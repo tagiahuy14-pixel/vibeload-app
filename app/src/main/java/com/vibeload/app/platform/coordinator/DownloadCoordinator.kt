@@ -13,6 +13,7 @@ import com.vibeload.app.domain.repository.DownloadProgressListener
 import com.vibeload.app.domain.repository.HistoryRepository
 import com.vibeload.app.domain.repository.MediaProcessor
 import com.vibeload.app.domain.repository.MediaStorageRepository
+import com.vibeload.app.platform.image.ImageDownloader
 import com.vibeload.app.platform.service.DownloadForegroundService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,7 @@ class DownloadCoordinator(
     private val historyRepository: HistoryRepository
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + Job())
+    private val imageDownloader = ImageDownloader()
 
     private val _currentTask = MutableStateFlow<DownloadTask?>(null)
     val currentTask: StateFlow<DownloadTask?> = _currentTask.asStateFlow()
@@ -64,6 +66,7 @@ class DownloadCoordinator(
 
         val taskId = UUID.randomUUID().toString()
         val extension = when {
+            selectedFormat.isImage -> selectedFormat.ext.ifEmpty { "jpg" }
             selectedFormat.isVideo -> "mp4"
             selectedFormat.isOriginalAudio -> selectedFormat.ext
             else -> "mp3"
@@ -96,10 +99,15 @@ class DownloadCoordinator(
 
     private suspend fun executeDownloadPipeline(task: DownloadTask, metadata: MediaMetadata) {
         val tempDir = File(context.cacheDir, "vibeload_temp").apply { mkdirs() }
-        val rawTempFile = File(tempDir, "temp_dl_${task.id}.${task.selectedFormat.ext.ifEmpty { "mp4" }}")
+        val tempExt = when {
+            task.selectedFormat.isImage -> task.selectedFormat.ext.ifEmpty { "jpg" }
+            task.selectedFormat.isVideo -> task.selectedFormat.ext.ifEmpty { "mp4" }
+            else -> "mp3"
+        }
+        val rawTempFile = File(tempDir, "temp_dl_${task.id}.$tempExt")
         val videoTempFile = File(tempDir, "temp_vid_${task.id}.${task.selectedFormat.ext.ifEmpty { "mp4" }}")
         val audioTempFile = File(tempDir, "temp_aud_${task.id}.m4a")
-        val processedFile = File(tempDir, "temp_proc_${task.id}.${if (task.selectedFormat.isVideo) "mp4" else "mp3"}")
+        val processedFile = File(tempDir, "temp_proc_${task.id}.${if (task.selectedFormat.isVideo) "mp4" else if (task.selectedFormat.isImage) tempExt else "mp3"}")
 
         var attempt = 0
         val maxRetries = 3
@@ -122,7 +130,51 @@ class DownloadCoordinator(
 
                 val finalFileToPublish: File
 
-                if (task.selectedFormat.isVideo) {
+                if (task.selectedFormat.isImage) {
+                    val imageListener = object : DownloadProgressListener {
+                        override fun onProgress(
+                            percent: Float,
+                            speed: Float,
+                            downloadedBytes: Long,
+                            totalBytes: Long,
+                            etaSeconds: Long
+                        ) {
+                            _currentTask.value = _currentTask.value?.copy(
+                                progress = percent,
+                                speedBytesPerSec = speed,
+                                downloadedBytes = downloadedBytes,
+                                totalBytes = if (totalBytes > 0) totalBytes else task.totalBytes,
+                                etaSeconds = etaSeconds
+                            )
+                            DownloadForegroundService.updateProgress(
+                                context,
+                                task.title,
+                                percent.toInt(),
+                                speed,
+                                false
+                            )
+                        }
+
+                        override fun isCancelled(): Boolean = isCancelled || isPaused
+                    }
+
+                    val imgResult = imageDownloader.downloadImage(
+                        url = task.url,
+                        targetTempFile = rawTempFile,
+                        progressListener = imageListener
+                    )
+
+                    if (isCancelled) {
+                        handleCancellation(rawTempFile, videoTempFile, audioTempFile, processedFile)
+                        return
+                    }
+
+                    if (imgResult.isFailure) {
+                        throw imgResult.exceptionOrNull() ?: Exception("Lỗi khi tải hình ảnh")
+                    }
+
+                    finalFileToPublish = rawTempFile
+                } else if (task.selectedFormat.isVideo) {
                     if (task.selectedFormat.needsMerge) {
                         // Two-stage download: Video track + Audio track, then merge via FFmpegKit (in-process JNI)
                         // Step 1: Download video track (0% -> 70%)
@@ -366,6 +418,7 @@ class DownloadCoordinator(
                 _currentTask.value = _currentTask.value?.copy(status = DownloadStatus.SAVING, progress = 99f)
 
                 val mimeType = when {
+                    task.selectedFormat.isImage -> task.selectedFormat.mimeType.ifEmpty { "image/jpeg" }
                     task.selectedFormat.isVideo -> "video/mp4"
                     task.selectedFormat.isOriginalAudio -> "audio/${task.selectedFormat.ext}"
                     else -> "audio/mpeg"
@@ -373,12 +426,20 @@ class DownloadCoordinator(
 
                 val finalFileSize = finalFileToPublish.length().coerceAtLeast(1L)
 
-                val mediaStoreUriResult = storageRepository.saveToMediaStore(
-                    tempFile = finalFileToPublish,
-                    targetFilename = task.outputFilename,
-                    mimeType = mimeType,
-                    isAudio = !task.selectedFormat.isVideo
-                )
+                val mediaStoreUriResult = if (task.selectedFormat.isImage) {
+                    storageRepository.saveImageToMediaStore(
+                        tempFile = finalFileToPublish,
+                        targetFilename = task.outputFilename,
+                        mimeType = mimeType
+                    )
+                } else {
+                    storageRepository.saveToMediaStore(
+                        tempFile = finalFileToPublish,
+                        targetFilename = task.outputFilename,
+                        mimeType = mimeType,
+                        isAudio = !task.selectedFormat.isVideo
+                    )
+                }
 
                 if (mediaStoreUriResult.isFailure) {
                     throw mediaStoreUriResult.exceptionOrNull() ?: Exception("Lỗi lưu MediaStore")
@@ -392,13 +453,13 @@ class DownloadCoordinator(
                     title = task.title,
                     originalUrl = task.url,
                     mediaUriString = publishedUri.toString(),
-                    relativePath = if (task.selectedFormat.isVideo) "Movies/VibeLoad" else "Music/VibeLoad",
+                    relativePath = if (task.selectedFormat.isImage) "Pictures/VibeLoad" else if (task.selectedFormat.isVideo) "Movies/VibeLoad" else "Music/VibeLoad",
                     fileName = task.outputFilename,
                     mimeType = mimeType,
-                    isAudio = !task.selectedFormat.isVideo,
+                    isAudio = !task.selectedFormat.isVideo && !task.selectedFormat.isImage,
                     fileSize = finalFileSize,
                     durationSeconds = metadata.durationSeconds,
-                    thumbnailUri = metadata.thumbnail
+                    thumbnailUri = if (task.selectedFormat.isImage) publishedUri.toString() else metadata.thumbnail
                 )
                 historyRepository.addRecord(historyEntity)
 
@@ -477,9 +538,11 @@ class DownloadCoordinator(
                     thumbnail = "",
                     uploader = "",
                     durationSeconds = 0,
-                    platform = "media",
-                    videoOptions = listOf(task.selectedFormat),
-                    audioOptions = emptyList()
+                    platform = if (task.selectedFormat.isImage) "image" else "media",
+                    videoOptions = if (task.selectedFormat.isVideo) listOf(task.selectedFormat) else emptyList(),
+                    audioOptions = if (!task.selectedFormat.isVideo && !task.selectedFormat.isImage) listOf(task.selectedFormat) else emptyList(),
+                    imageOptions = if (task.selectedFormat.isImage) listOf(task.selectedFormat) else emptyList(),
+                    isImageOnly = task.selectedFormat.isImage
                 )
                 executeDownloadPipeline(task, dummyMeta)
             }

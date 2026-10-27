@@ -14,6 +14,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.vibeload.app.domain.model.DownloadStatus
+import com.vibeload.app.data.local.entity.isImage
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import com.vibeload.app.presentation.downloading.DownloadingScreen
 import com.vibeload.app.presentation.downloading.DownloadingViewModel
 import com.vibeload.app.presentation.home.HomeScreen
@@ -42,6 +46,8 @@ fun AppNavigation(
     val isDownloadActive = activeTask?.status?.isActive() == true
 
     val showBottomBar = currentRoute?.startsWith("player") != true
+
+    val context = LocalContext.current
 
     Scaffold(
         bottomBar = {
@@ -118,13 +124,24 @@ fun AppNavigation(
                         }
                     },
                     onPlayMedia = { item ->
-                        navController.navigate(
-                            Screen.Player.createRoute(
-                                mediaUri = item.mediaUriString,
-                                title = item.title.ifBlank { item.fileName },
-                                isAudio = item.isAudio
+                        if (item.isImage) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(item.mediaUriString), item.mimeType)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Xem ảnh"))
+                            } catch (_: Exception) { }
+                        } else {
+                            navController.navigate(
+                                Screen.Player.createRoute(
+                                    mediaUri = item.mediaUriString,
+                                    title = item.title.ifBlank { item.fileName },
+                                    isAudio = item.isAudio
+                                )
                             )
-                        )
+                        }
                     }
                 )
             }
@@ -146,13 +163,24 @@ fun AppNavigation(
                 LibraryScreen(
                     viewModel = libraryViewModel,
                     onPlayMedia = { item ->
-                        navController.navigate(
-                            Screen.Player.createRoute(
-                                mediaUri = item.mediaUriString,
-                                title = item.title.ifBlank { item.fileName },
-                                isAudio = item.isAudio
+                        if (item.isImage) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(item.mediaUriString), item.mimeType)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Xem ảnh"))
+                            } catch (_: Exception) { }
+                        } else {
+                            navController.navigate(
+                                Screen.Player.createRoute(
+                                    mediaUri = item.mediaUriString,
+                                    title = item.title.ifBlank { item.fileName },
+                                    isAudio = item.isAudio
+                                )
                             )
-                        )
+                        }
                     }
                 )
             }

@@ -5,6 +5,46 @@ Tất cả các thay đổi đáng chú ý của dự án **VibeLoad** sẽ đư
 
 ---
 
+## [1.0.2] - 2026-10-27
+
+### 🖼️ Bổ sung chức năng tải ảnh thực sự & đa định dạng (Multi-Format Image Downloader)
+
+- **Hỗ trợ đầy đủ 10 định dạng ảnh**:
+  - `JPG/JPEG`: Nhận diện magic bytes `FF D8 FF`, lưu chuẩn `image/jpeg`.
+  - `PNG`: Nhận diện magic bytes `89 50 4E 47`, lưu chuẩn `image/png`.
+  - `WebP`: Nhận diện magic bytes `RIFF....WEBP`, lưu chuẩn `image/webp`.
+  - `GIF`: Giữ nguyên hoạt ảnh đa khung hình (animated GIF), tích hợp `coil-gif` hiển thị động mượt mà.
+  - `AVIF`: Nhận diện ISO-BMFF `ftypavif`/`avis`, lưu chuẩn `image/avif`.
+  - `BMP`: Nhận diện magic bytes `BM`, lưu chuẩn `image/bmp`.
+  - `TIFF`: Hỗ trợ cả Little-Endian (`II*\0`) và Big-Endian (`MM\0*`), lưu chuẩn `image/tiff`.
+  - `HEIC/HEIF`: Nhận diện container `ftypheic`, lưu chuẩn `image/heic`.
+  - `SVG`: Giữ nguyên vector markup, tích hợp `coil-svg` giải mã và hiển thị vector sắc nét.
+  - `ICO`: Nhận diện cấu trúc icon/cursor `00 00 01 00`, lưu chuẩn `image/x-icon`.
+- **Nhận diện và chống giả mạo thông minh**:
+  - Không chỉ dựa vào phần mở rộng URL; kiểm tra `Content-Type` và chữ ký nhị phân (magic bytes).
+  - Tự động phát hiện và từ chối tải các trang mã lỗi HTML/JSON giả dạng ảnh.
+  - Hỗ trợ URL có query parameters, chuyển hướng HTTP 301/302/307/308, và URL không có phần mở rộng (extension-less).
+- **Lưu trữ Scoped Storage chuẩn Android**:
+  - Lưu ảnh vào thư mục công khai `Pictures/VibeLoad` qua MediaStore `MediaStore.Images.Media`.
+  - Quản lý cờ `IS_PENDING = 1` và `0`, tự động chống trùng tên (`name (1).ext`).
+  - Dọn dẹp tệp tạm thời khi hủy tải hoặc gặp sự cố.
+- **Giao diện & Quản lý thư viện ảnh**:
+  - Thẻ thông tin loại nội dung **Ảnh**, định dạng thực tế và dung lượng tệp.
+  - Nút **Tải ảnh** trực tiếp, thanh tiến trình, hủy và thử lại.
+  - Tab lọc **Ảnh** trong thư viện và trên màn hình chính.
+  - Thao tác xem ảnh toàn màn hình qua Android Gallery/Photos, chia sẻ, đổi tên và xóa an toàn.
+
+---
+
+## [1.0.1] - 2026-10-27
+
+### ⚡ Nâng cấp kiểm tra cập nhật & sửa lỗi phát media
+- Tự động kiểm tra bản phát hành mới qua GitHub Release `tagiahuy14-pixel/vibeload-app`.
+- Sửa lỗi không phát được tệp media và khắc phục trường hợp video tải về thiếu âm thanh.
+- Tinh chỉnh giao diện Dark Mode hiện đại.
+
+---
+
 ## [1.0.0] - 2026-10-26
 
 ### 🚀 Khởi tạo phiên bản chính thức đầu tiên

@@ -120,16 +120,85 @@ class MediaStoreStorageManager(
         }
     }
 
-    private fun resolveUniqueDisplayName(baseName: String, isAudio: Boolean): String {
-        val dotIndex = baseName.lastIndexOf('.')
-        val nameWithoutExt = if (dotIndex > 0) baseName.substring(0, dotIndex) else baseName
-        val ext = if (dotIndex > 0) baseName.substring(dotIndex) else if (isAudio) ".mp3" else ".mp4"
+    override suspend fun saveImageToMediaStore(
+        tempFile: File,
+        targetFilename: String,
+        mimeType: String
+    ): Result<Uri> = withContext(Dispatchers.IO) {
+        try {
+            if (!tempFile.exists() || tempFile.length() == 0L) {
+                return@withContext Result.failure(Exception("File ảnh nguồn tạm thời rỗng hoặc không tồn tại"))
+            }
 
-        val collection = if (isAudio) {
+            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            } else {
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            }
+
+            val relativePath = "Pictures/VibeLoad"
+            val uniqueDisplayName = resolveUniqueDisplayNameForCollection(
+                targetFilename,
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                "jpg"
+            )
+
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, uniqueDisplayName)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+            }
+
+            val itemUri = contentResolver.insert(collection, values)
+                ?: return@withContext Result.failure(Exception("Không thể tạo bản ghi MediaStore cho ảnh"))
+
+            try {
+                contentResolver.openOutputStream(itemUri)?.use { outStream ->
+                    FileInputStream(tempFile).use { inStream ->
+                        inStream.copyTo(outStream)
+                        outStream.flush()
+                    }
+                } ?: throw Exception("Không thể mở luồng ghi MediaStore cho ảnh")
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val completeValues = ContentValues().apply {
+                        put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    }
+                    contentResolver.update(itemUri, completeValues, null, null)
+                }
+
+                tempFile.delete()
+                Result.success(itemUri)
+            } catch (e: Exception) {
+                contentResolver.delete(itemUri, null, null)
+                Result.failure(e)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun resolveUniqueDisplayName(baseName: String, isAudio: Boolean): String {
+        val queryCollection = if (isAudio) {
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         } else {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         }
+        val defaultExt = if (isAudio) "mp3" else "mp4"
+        return resolveUniqueDisplayNameForCollection(baseName, queryCollection, defaultExt)
+    }
+
+    private fun resolveUniqueDisplayNameForCollection(
+        baseName: String,
+        collection: Uri,
+        defaultExt: String
+    ): String {
+        val dotIndex = baseName.lastIndexOf('.')
+        val nameWithoutExt = if (dotIndex > 0) baseName.substring(0, dotIndex) else baseName
+        val ext = if (dotIndex > 0) baseName.substring(dotIndex) else ".$defaultExt"
 
         var candidate = "$nameWithoutExt$ext"
         var counter = 1

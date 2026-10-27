@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.vibeload.app.data.local.entity.HistoryEntity
+import com.vibeload.app.data.local.entity.isImage
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -101,6 +102,11 @@ fun LibraryScreen(
                     selected = uiState.selectedTab == 2,
                     onClick = { viewModel.selectTab(2) },
                     text = { Text("Âm thanh") }
+                )
+                Tab(
+                    selected = uiState.selectedTab == 3,
+                    onClick = { viewModel.selectTab(3) },
+                    text = { Text("Ảnh") }
                 )
             }
 
@@ -339,6 +345,13 @@ fun MediaItemCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
+                } else if (item.isImage) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
                 } else {
                     Icon(
                         imageVector = if (item.isAudio) Icons.Default.MusicNote else Icons.Default.PlayArrow,
@@ -363,8 +376,13 @@ fun MediaItemCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                val typeLabel = when {
+                    item.isImage -> "${item.fileName.substringAfterLast(".").lowercase()} • ${item.fileName}"
+                    item.isAudio -> "mp3 • ${item.fileName}"
+                    else -> item.fileName
+                }
                 Text(
-                    text = item.fileName,
+                    text = typeLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -397,8 +415,8 @@ fun MediaItemCard(
             // Play & Overflow Menu
             IconButton(onClick = onPlay) {
                 Icon(
-                    imageVector = Icons.Default.PlayCircle,
-                    contentDescription = "Phát",
+                    imageVector = if (item.isImage) Icons.Default.Visibility else Icons.Default.PlayCircle,
+                    contentDescription = if (item.isImage) "Xem ảnh" else "Phát",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(36.dp)
                 )
@@ -414,12 +432,12 @@ fun MediaItemCard(
                     onDismissRequest = { menuExpanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Phát") },
+                        text = { Text(if (item.isImage) "Xem ảnh" else "Phát") },
                         onClick = {
                             menuExpanded = false
                             onPlay()
                         },
-                        leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null) }
+                        leadingIcon = { Icon(if (item.isImage) Icons.Default.Visibility else Icons.Default.PlayArrow, contentDescription = null) }
                     )
                     DropdownMenuItem(
                         text = { Text("Đổi tên") },

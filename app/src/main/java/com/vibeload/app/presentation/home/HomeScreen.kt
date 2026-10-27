@@ -34,6 +34,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.vibeload.app.R
 import com.vibeload.app.data.local.entity.HistoryEntity
+import com.vibeload.app.data.local.entity.isImage
 import com.vibeload.app.domain.model.FormatOption
 import com.vibeload.app.presentation.library.LibrarySortOrder
 import com.vibeload.app.presentation.library.LibraryViewModel
@@ -387,90 +388,137 @@ fun HomeScreen(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Tác giả: ${meta.uploader}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF94A3B8)
-                                    )
-                                    Text(
-                                        text = meta.getFormattedDuration(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF38BDF8)
-                                    )
+                                if (meta.isImageOnly) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        val imageOpt = uiState.selectedFormat ?: meta.imageOptions.firstOrNull()
+                                        val formatName = imageOpt?.ext?.uppercase() ?: "ẢNH"
+                                        Text(
+                                            text = "Loại nội dung: Ảnh ($formatName)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFF38BDF8)
+                                        )
+                                        if (imageOpt != null && imageOpt.filesize > 0) {
+                                            val mb = imageOpt.filesize / (1024.0 * 1024.0)
+                                            val sizeStr = if (mb >= 1.0) String.format(Locale.US, "%.1f MB", mb) else String.format(Locale.US, "%.0f KB", imageOpt.filesize / 1024.0)
+                                            Text(
+                                                text = "Kích thước: $sizeStr",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Tác giả: ${meta.uploader}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF94A3B8)
+                                        )
+                                        Text(
+                                            text = meta.getFormattedDuration(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFF38BDF8)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Format Selection Tabs
-                    Text(
-                        text = stringResource(R.string.home_format_selection_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-
-                    TabRow(
-                        selectedTabIndex = formatCategoryTab,
-                        modifier = Modifier.clip(RoundedCornerShape(12.dp)),
-                        containerColor = Color(0xFF131926)
-                    ) {
-                        Tab(
-                            selected = formatCategoryTab == 0,
-                            onClick = { formatCategoryTab = 0 },
-                            text = { Text("Video (MP4)", color = if (formatCategoryTab == 0) Color.White else Color(0xFF94A3B8)) },
-                            icon = { Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (formatCategoryTab == 0) Color(0xFF38BDF8) else Color(0xFF64748B)) }
+                    if (meta.isImageOnly) {
+                        Text(
+                            text = "Định dạng ảnh",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
-                        Tab(
-                            selected = formatCategoryTab == 1,
-                            onClick = { formatCategoryTab = 1 },
-                            text = { Text("Âm thanh (MP3)", color = if (formatCategoryTab == 1) Color.White else Color(0xFF94A3B8)) },
-                            icon = { Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (formatCategoryTab == 1) Color(0xFFA78BFA) else Color(0xFF64748B)) }
-                        )
-                        Tab(
-                            selected = formatCategoryTab == 2,
-                            onClick = { formatCategoryTab = 2 },
-                            text = { Text("Gốc", color = if (formatCategoryTab == 2) Color.White else Color(0xFF94A3B8)) }
-                        )
-                    }
-
-                    // Options chips
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        when (formatCategoryTab) {
-                            0 -> {
-                                meta.videoOptions.forEach { opt ->
-                                    FormatChip(
-                                        option = opt,
-                                        isSelected = uiState.selectedFormat == opt,
-                                        onClick = { viewModel.selectFormat(opt) }
-                                    )
-                                }
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            meta.imageOptions.forEach { opt ->
+                                FormatChip(
+                                    option = opt,
+                                    isSelected = uiState.selectedFormat == opt,
+                                    onClick = { viewModel.selectFormat(opt) }
+                                )
                             }
-                            1 -> {
-                                meta.audioOptions.filter { !it.isOriginalAudio }.forEach { opt ->
-                                    FormatChip(
-                                        option = opt,
-                                        isSelected = uiState.selectedFormat == opt,
-                                        onClick = { viewModel.selectFormat(opt) }
-                                    )
+                        }
+                    } else {
+                        // Format Selection Tabs
+                        Text(
+                            text = stringResource(R.string.home_format_selection_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+
+                        TabRow(
+                            selectedTabIndex = formatCategoryTab,
+                            modifier = Modifier.clip(RoundedCornerShape(12.dp)),
+                            containerColor = Color(0xFF131926)
+                        ) {
+                            Tab(
+                                selected = formatCategoryTab == 0,
+                                onClick = { formatCategoryTab = 0 },
+                                text = { Text("Video (MP4)", color = if (formatCategoryTab == 0) Color.White else Color(0xFF94A3B8)) },
+                                icon = { Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (formatCategoryTab == 0) Color(0xFF38BDF8) else Color(0xFF64748B)) }
+                            )
+                            Tab(
+                                selected = formatCategoryTab == 1,
+                                onClick = { formatCategoryTab = 1 },
+                                text = { Text("Âm thanh (MP3)", color = if (formatCategoryTab == 1) Color.White else Color(0xFF94A3B8)) },
+                                icon = { Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (formatCategoryTab == 1) Color(0xFFA78BFA) else Color(0xFF64748B)) }
+                            )
+                            Tab(
+                                selected = formatCategoryTab == 2,
+                                onClick = { formatCategoryTab = 2 },
+                                text = { Text("Gốc", color = if (formatCategoryTab == 2) Color.White else Color(0xFF94A3B8)) }
+                            )
+                        }
+
+                        // Options chips
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            when (formatCategoryTab) {
+                                0 -> {
+                                    meta.videoOptions.forEach { opt ->
+                                        FormatChip(
+                                            option = opt,
+                                            isSelected = uiState.selectedFormat == opt,
+                                            onClick = { viewModel.selectFormat(opt) }
+                                        )
+                                    }
                                 }
-                            }
-                            2 -> {
-                                meta.audioOptions.filter { it.isOriginalAudio }.forEach { opt ->
-                                    FormatChip(
-                                        option = opt,
-                                        isSelected = uiState.selectedFormat == opt,
-                                        onClick = { viewModel.selectFormat(opt) }
-                                    )
+                                1 -> {
+                                    meta.audioOptions.filter { !it.isOriginalAudio }.forEach { opt ->
+                                        FormatChip(
+                                            option = opt,
+                                            isSelected = uiState.selectedFormat == opt,
+                                            onClick = { viewModel.selectFormat(opt) }
+                                        )
+                                    }
+                                }
+                                2 -> {
+                                    meta.audioOptions.filter { it.isOriginalAudio }.forEach { opt ->
+                                        FormatChip(
+                                            option = opt,
+                                            isSelected = uiState.selectedFormat == opt,
+                                            onClick = { viewModel.selectFormat(opt) }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -513,7 +561,7 @@ fun HomeScreen(
                         Icon(Icons.Default.Download, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.home_download_button),
+                            text = if (meta.isImageOnly || uiState.selectedFormat?.isImage == true) "Tải ảnh" else stringResource(R.string.home_download_button),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = Color.White
@@ -525,10 +573,10 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Filter Pills: "Tất cả (count)", "Video", "Âm thanh"
+        // Filter Pills: "Tất cả (count)", "Video", "Âm thanh", "Ảnh"
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val totalCount = downloadedItems.size
             FilterPill(
@@ -551,6 +599,13 @@ fun HomeScreen(
                 icon = Icons.Default.MusicNote,
                 isSelected = libraryUiState.selectedTab == 2,
                 onClick = { libraryViewModel.selectTab(2) }
+            )
+            FilterPill(
+                title = "Ảnh",
+                count = null,
+                icon = Icons.Default.Image,
+                isSelected = libraryUiState.selectedTab == 3,
+                onClick = { libraryViewModel.selectTab(3) }
             )
         }
 
@@ -902,6 +957,24 @@ fun VibeMediaCard(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
+                    } else if (item.isImage) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFF0D9488), Color(0xFF0284C7), Color(0xFF2563EB))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Image,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     } else if (!item.isAudio) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
@@ -963,8 +1036,13 @@ fun VibeMediaCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(3.dp))
+                    val typeLabel = when {
+                        item.isImage -> "${item.fileName.substringAfterLast(".").lowercase()} • ${item.fileName}"
+                        item.isAudio -> "mp3 • ${item.fileName}"
+                        else -> item.fileName
+                    }
                     Text(
-                        text = if (item.isAudio) "mp3 • ${item.fileName}" else item.fileName,
+                        text = typeLabel,
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF94A3B8),
                         maxLines = 1,
@@ -995,6 +1073,14 @@ fun VibeMediaCard(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text(if (item.isImage) "Xem ảnh" else "Phát") },
+                            onClick = {
+                                menuExpanded = false
+                                onPlay()
+                            },
+                            leadingIcon = { Icon(if (item.isImage) Icons.Default.Visibility else Icons.Default.PlayArrow, contentDescription = null) }
+                        )
                         DropdownMenuItem(
                             text = { Text("Đổi tên") },
                             onClick = {
@@ -1034,12 +1120,12 @@ fun VibeMediaCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Bottom Buttons Row: "Phát", "Mở thư mục", "Xóa"
+            // Bottom Buttons Row: "Phát" / "Xem ảnh", "Mở thư mục", "Xóa"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Play Button (Blue Pill)
+                // Play / View Button (Blue Pill)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -1051,14 +1137,14 @@ fun VibeMediaCard(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
+                            imageVector = if (item.isImage) Icons.Default.Visibility else Icons.Default.PlayArrow,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Phát",
+                            text = if (item.isImage) "Xem ảnh" else "Phát",
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold

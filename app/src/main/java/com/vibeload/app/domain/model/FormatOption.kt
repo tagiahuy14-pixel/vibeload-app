@@ -11,7 +11,9 @@ data class FormatOption(
     val isVideo: Boolean = true,
     val needsMerge: Boolean = false,
     val bitrateKbps: Int = 0,
-    val isOriginalAudio: Boolean = false
+    val isOriginalAudio: Boolean = false,
+    val isImage: Boolean = false,
+    val mimeType: String = ""
 ) {
     fun getFormattedSize(): String {
         if (filesize <= 0L) return "Không rõ dung lượng"

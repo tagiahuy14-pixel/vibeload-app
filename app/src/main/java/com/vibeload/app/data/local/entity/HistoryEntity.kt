@@ -19,3 +19,23 @@ data class HistoryEntity(
     val thumbnailUri: String,
     val completedAt: Long = System.currentTimeMillis()
 )
+
+val HistoryEntity.isImage: Boolean
+    get() = mimeType.startsWith("image/", ignoreCase = true) ||
+            relativePath.contains("Pictures", ignoreCase = true) ||
+            fileName.endsWith(".jpg", ignoreCase = true) ||
+            fileName.endsWith(".jpeg", ignoreCase = true) ||
+            fileName.endsWith(".png", ignoreCase = true) ||
+            fileName.endsWith(".webp", ignoreCase = true) ||
+            fileName.endsWith(".gif", ignoreCase = true) ||
+            fileName.endsWith(".avif", ignoreCase = true) ||
+            fileName.endsWith(".bmp", ignoreCase = true) ||
+            fileName.endsWith(".tiff", ignoreCase = true) ||
+            fileName.endsWith(".tif", ignoreCase = true) ||
+            fileName.endsWith(".heic", ignoreCase = true) ||
+            fileName.endsWith(".heif", ignoreCase = true) ||
+            fileName.endsWith(".svg", ignoreCase = true) ||
+            fileName.endsWith(".ico", ignoreCase = true)
+
+val HistoryEntity.isVideo: Boolean
+    get() = !isAudio && !isImage

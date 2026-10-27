@@ -11,6 +11,12 @@ interface MediaStorageRepository {
         isAudio: Boolean
     ): Result<Uri>
 
+    suspend fun saveImageToMediaStore(
+        tempFile: File,
+        targetFilename: String,
+        mimeType: String
+    ): Result<Uri>
+
     fun sanitizeFilename(rawTitle: String, extension: String): String
     suspend fun deleteFile(uri: Uri): Result<Boolean>
     suspend fun renameFile(uri: Uri, newName: String): Result<Boolean>

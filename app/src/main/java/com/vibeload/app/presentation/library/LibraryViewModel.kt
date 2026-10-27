@@ -6,6 +6,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vibeload.app.data.local.entity.HistoryEntity
+import com.vibeload.app.data.local.entity.isImage
+import com.vibeload.app.data.local.entity.isVideo
 import com.vibeload.app.domain.repository.HistoryRepository
 import com.vibeload.app.domain.repository.MediaStorageRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,10 +46,11 @@ class LibraryViewModel(
         historyRepository.getAllHistory(),
         _uiState
     ) { allList, state ->
-        // Filter by tab
+        // Filter by tab: 0: All, 1: Video, 2: Audio, 3: Image
         val tabFiltered = when (state.selectedTab) {
-            1 -> allList.filter { !it.isAudio }
+            1 -> allList.filter { it.isVideo }
             2 -> allList.filter { it.isAudio }
+            3 -> allList.filter { it.isImage }
             else -> allList
         }
 
@@ -96,7 +99,12 @@ class LibraryViewModel(
 
     fun confirmRename(item: HistoryEntity, newName: String) {
         viewModelScope.launch {
-            val sanitized = storageRepository.sanitizeFilename(newName, if (item.isAudio) "mp3" else "mp4")
+            val defaultExt = when {
+                item.isImage -> item.fileName.substringAfterLast(".", "jpg")
+                item.isAudio -> "mp3"
+                else -> "mp4"
+            }
+            val sanitized = storageRepository.sanitizeFilename(newName, defaultExt)
             try {
                 val uri = Uri.parse(item.mediaUriString)
                 val res = storageRepository.renameFile(uri, sanitized)
