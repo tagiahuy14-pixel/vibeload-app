@@ -195,20 +195,18 @@ def main():
     release_id = None
     upload_url_template = None
 
-    release_body = f"""## VibeLoad Phien ban {tag_name}
+    release_body = f"""## VibeLoad Phiên bản {tag_name}
 
 ### SHA-256 Checksum:
 `{sha256}`
 
-### Tinh nang & Thay doi moi:
-- **Ho tro tai anh da dinh dang**: JPG/JPEG, PNG, WebP, GIF hoat anh, AVIF, BMP, TIFF, HEIC, SVG vector, ICO.
-- **Ho tro tai album anh TikTok (Photo Slide)**: Tu dong boc tach toan bo anh chat luong cao va nhac nen MP3.
-- **Tu dong nhan dien lien ket Facebook & OpenGraph**: Ho tro link chia se facebook.com/share/, fb.watch va tai anh Facebook chat luong cao.
-- **Sua triet de co che OTA Update**: Khac phuc loi kiem tra versionCode giup cap nhat muot ma khong loi.
-- **Tu dong nhan dien Magic Bytes & chong gia mao**: Ngan chan luu ma loi HTML/JSON gia dang anh.
-- **Luu tru chuan Scoped Storage**: Luu tai thu muc cong khai `Pictures/VibeLoad`, co `IS_PENDING` an toan.
-- **Thu vien anh tich hop**: Xem anh, chia se, doi ten, xoa va mo thu muc.
-- **Duy tri day du chuc nang video & audio**: Tai MP4 full HD, DASH muxing, chuyen doi MP3 chat luong cao.
+### Tính năng & Thay đổi mới:
+- **Khắc phục quyền cập nhật OTA**: Khai báo quyền `REQUEST_INSTALL_PACKAGES` trong Manifest và tự động mở màn hình cấp quyền Cài đặt ứng dụng không rõ nguồn, sửa dứt điểm lỗi *"VibeLoad doesn't have permission to install items"*.
+- **Hỗ trợ tải toàn bộ Album ảnh TikTok (Photo Slides / Carousel)**: Tự động trích xuất toàn bộ ảnh gốc chất lượng cao theo đúng thứ tự 1..N và tải kèm nhạc nền MP3.
+- **Tiến trình tải theo ảnh trực quan**: Hiển thị `Đang tải X/Y ảnh` và lưu vào thư mục riêng `Pictures/VibeLoad/TikTok_<postId>/`.
+- **Hỗ trợ tải ảnh Facebook & OpenGraph**: Nhận diện ảnh bài đăng Facebook chất lượng cao qua CDN `scontent...fbcdn.net`.
+- **Hỗ trợ tải ảnh đa định dạng**: JPG, PNG, WebP, GIF, AVIF, BMP, TIFF, HEIC, SVG vector, ICO với kiểm tra Magic Bytes chống lưu nhầm HTML.
+- **Duy trì đầy đủ chức năng tải video MP4 & âm thanh MP3**: Hỗ trợ YouTube, TikTok, Facebook, Instagram, Threads, SoundCloud với DASH muxing FFmpeg.
 """
 
     if status_code == 200 and isinstance(release_data, dict) and "id" in release_data:
