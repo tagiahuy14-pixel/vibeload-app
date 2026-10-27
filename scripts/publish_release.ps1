@@ -32,7 +32,7 @@ if ($Token -eq "") {
     
     $save = (Read-Host "Luu token vao may de lan sau khong can nhap lai? (y/n)").Trim().ToLower()
     if ($save -eq "y" -or $save -eq "yes" -or $save -eq "") {
-        Set-Content -Path $TokenFile -Value $Token -Encoding UTF8
+        [System.IO.File]::WriteAllText($TokenFile, $Token, (New-Object System.Text.UTF8Encoding $false))
         Write-Host "[OK] Da luu token an toan vao file .github_token" -ForegroundColor Green
     }
 }

@@ -93,6 +93,26 @@ def clean_and_normalize_url(raw_url):
 
     return url
 
+def resolve_redirect_if_needed(url):
+    """
+    Follow HTTP redirects for short links and share wrappers:
+    - TikTok: vt.tiktok.com, vm.tiktok.com
+    - Facebook: fb.watch, facebook.com/share/
+    """
+    if not url:
+        return ""
+    url_lower = url.lower()
+    if any(k in url_lower for k in ("vt.tiktok.com", "vm.tiktok.com", "fb.watch", "facebook.com/share/")):
+        try:
+            req = urllib.request.Request(url, headers=DEFAULT_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resolved = resp.geturl()
+                if resolved:
+                    return resolved
+        except Exception:
+            pass
+    return url
+
 def format_error_message(err_str, url=""):
     """
     Translate raw yt-dlp CLI errors into polite, user-friendly Vietnamese guidance.
@@ -239,12 +259,80 @@ def extract_tiktok_photos(url):
     except Exception:
         return None
 
+def extract_opengraph_media(url):
+    """
+    Fallback extractor for platforms (Facebook photos, articles, web pages)
+    using OpenGraph metadata when yt-dlp fails or is unsupported.
+    """
+    try:
+        req = urllib.request.Request(url, headers=DEFAULT_HEADERS)
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            final_url = resp.geturl()
+            html = resp.read().decode('utf-8', errors='ignore')
+
+        # Check for og:image
+        og_img_match = re.search(r'<meta\s+(?:property|name)=[\"\']og:image[\"\']\s+content=[\"\']([^\"\']+)[\"\']', html, re.I)
+        if not og_img_match:
+            og_img_match = re.search(r'<meta\s+content=[\"\']([^\"\']+)[\"\']\s+(?:property|name)=[\"\']og:image[\"\']', html, re.I)
+
+        if not og_img_match:
+            return None
+
+        img_url = og_img_match.group(1).replace('&amp;', '&')
+        if not img_url.startswith('http'):
+            return None
+
+        # Check for og:title
+        title = "Ảnh phương tiện"
+        t_match = re.search(r'<meta\s+(?:property|name)=[\"\']og:title[\"\']\s+content=[\"\']([^\"\']+)[\"\']', html, re.I)
+        if not t_match:
+            t_match = re.search(r'<meta\s+content=[\"\']([^\"\']+)[\"\']\s+(?:property|name)=[\"\']og:title[\"\']', html, re.I)
+        if t_match:
+            title = t_match.group(1).replace('&amp;', '&').replace('&quot;', '"').strip()
+
+        # Check for og:site_name
+        site_name = "Facebook" if "facebook" in url.lower() else "Mạng xã hội"
+        s_match = re.search(r'<meta\s+(?:property|name)=[\"\']og:site_name[\"\']\s+content=[\"\']([^\"\']+)[\"\']', html, re.I)
+        if s_match:
+            site_name = s_match.group(1).strip()
+
+        ext = "jpg"
+        for candidate_ext in ["png", "webp", "gif", "jpeg", "jpg"]:
+            if f".{candidate_ext}" in img_url.lower():
+                ext = "jpg" if candidate_ext == "jpeg" else candidate_ext
+                break
+
+        return {
+            "success": True,
+            "url": final_url,
+            "title": title,
+            "thumbnail": img_url,
+            "uploader": site_name,
+            "duration": 0,
+            "platform": "facebook" if "facebook" in url.lower() else "web",
+            "video_options": [],
+            "audio_options": [],
+            "image_options": [{
+                "format_id": img_url,
+                "label": f"Ảnh ({ext.upper()})",
+                "ext": ext,
+                "resolution": "Gốc",
+                "filesize": 0,
+                "is_image": True,
+                "mime_type": f"image/{ext}"
+            }],
+            "is_image_only": True
+        }
+    except Exception:
+        return None
+
 def analyze_url(url):
     """
     Analyze given media URL and return structured JSON metadata.
     Supports YouTube, TikTok, Facebook, Instagram, SoundCloud, etc.
     """
     clean_url = clean_and_normalize_url(url)
+    clean_url = resolve_redirect_if_needed(clean_url)
 
     # For TikTok photo posts, attempt photo extraction first
     if "/photo/" in clean_url.lower():
@@ -426,12 +514,20 @@ def analyze_url(url):
             tt_photos = extract_tiktok_photos(clean_url)
             if tt_photos:
                 return json.dumps(tt_photos)
+        if "facebook" in clean_url.lower() or "fb.watch" in clean_url.lower() or "/share/" in clean_url.lower():
+            fb_media = extract_opengraph_media(clean_url)
+            if fb_media:
+                return json.dumps(fb_media)
         return json.dumps({"success": False, "error": format_error_message(str(e), url)})
     except Exception as e:
         if "tiktok" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower():
             tt_photos = extract_tiktok_photos(clean_url)
             if tt_photos:
                 return json.dumps(tt_photos)
+        if "facebook" in clean_url.lower() or "fb.watch" in clean_url.lower() or "/share/" in clean_url.lower():
+            fb_media = extract_opengraph_media(clean_url)
+            if fb_media:
+                return json.dumps(fb_media)
         return json.dumps({"success": False, "error": format_error_message(str(e), url)})
 
 def download_stream(url, format_spec, output_path, progress_listener=None):

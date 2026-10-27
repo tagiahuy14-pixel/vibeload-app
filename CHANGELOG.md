@@ -5,6 +5,23 @@ Tất cả các thay đổi đáng chú ý của dự án **VibeLoad** sẽ đư
 
 ---
 
+## [1.0.3] - 2026-10-27
+
+### ⚡ Cải tiến tải phương tiện & Tự động phát hành (Auto-Release)
+
+- **Trích xuất Album ảnh TikTok (Photo Slideshow)**:
+  - Tự động phát hiện và trích xuất trọn bộ album ảnh chất lượng cao kèm nhạc nền MP3 từ liên kết TikTok (bao gồm cả link rút gọn `vt.tiktok.com`, `vm.tiktok.com` và link chuẩn `/photo/`).
+- **Hỗ trợ bài đăng & liên kết chia sẻ Facebook**:
+  - Hỗ trợ giải quyết chuyển hướng cho các liên kết Facebook (`facebook.com/share/`, `fb.watch`).
+  - Tự động trích xuất ảnh OpenGraph độ nét cao đối với các bài viết ảnh Facebook mà yt-dlp không hỗ trợ.
+- **Sửa triệt để cơ chế xác minh cập nhật APK (In-App OTA Update)**:
+  - Khắc phục lỗi so sánh sai mã `versionCode` dẫn đến thông báo "Mã phiên bản APK thấp hơn phiên bản yêu cầu".
+  - Đảm bảo việc cập nhật trực tiếp diễn ra mượt mà, chính xác và an toàn.
+- **Công cụ tự động phát hành 1-Click (Automated GitHub Release)**:
+  - Tích hợp công cụ phát hành tự động qua GitHub API và GitHub Actions, không cần thao tác tạo Release thủ công qua trình duyệt web.
+
+---
+
 ## [1.0.2] - 2026-10-27
 
 ### 🖼️ Bổ sung chức năng tải ảnh thực sự & đa định dạng (Multi-Format Image Downloader)

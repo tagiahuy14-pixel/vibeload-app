@@ -64,17 +64,17 @@ def get_github_token():
     # 1. Tu doi so dong lenh
     for i, arg in enumerate(sys.argv):
         if arg in ("--token", "-t") and i + 1 < len(sys.argv):
-            return sys.argv[i + 1].strip()
+            return sys.argv[i + 1].strip().strip('\ufeff')
 
     # 2. Tu bien moi truong
-    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    token = os.environ.get("GITHUB_TOKEN", "").strip().strip('\ufeff')
     if token:
         return token
 
     # 3. Tu file .github_token
     if os.path.exists(TOKEN_FILE):
-        with open(TOKEN_FILE, "r", encoding="utf-8") as f:
-            t = f.read().strip()
+        with open(TOKEN_FILE, "r", encoding="utf-8-sig") as f:
+            t = f.read().strip().strip('\ufeff')
             if t:
                 return t
 
