@@ -43,8 +43,9 @@ class HomeViewModel(
         val clipData = clipboard?.primaryClip
         if (clipData != null && clipData.itemCount > 0) {
             val text = clipData.getItemAt(0).text?.toString()?.trim() ?: ""
-            if (isValidUrl(text)) {
-                _uiState.update { it.copy(urlInput = text, errorMessage = null) }
+            val normalized = normalizeUrl(text)
+            if (isValidUrl(normalized)) {
+                _uiState.update { it.copy(urlInput = normalized, errorMessage = null) }
                 analyzeUrl()
             } else {
                 _uiState.update { it.copy(errorMessage = "Nội dung khay nhớ tạm không phải là URL hợp lệ") }
@@ -55,13 +56,18 @@ class HomeViewModel(
     fun handleSharedUrl(sharedText: String) {
         val extractedUrl = extractUrlFromText(sharedText)
         if (extractedUrl.isNotEmpty()) {
-            _uiState.update { it.copy(urlInput = extractedUrl, errorMessage = null) }
+            val normalized = normalizeUrl(extractedUrl)
+            _uiState.update { it.copy(urlInput = normalized, errorMessage = null) }
             analyzeUrl()
         }
     }
 
     fun analyzeUrl() {
-        val url = _uiState.value.urlInput.trim()
+        val rawUrl = _uiState.value.urlInput.trim()
+        val url = normalizeUrl(rawUrl)
+        if (url != rawUrl) {
+            _uiState.update { it.copy(urlInput = url) }
+        }
         if (!isValidUrl(url)) {
             _uiState.update { it.copy(errorMessage = "Vui lòng nhập đường dẫn URL hợp lệ (bắt đầu bằng http:// hoặc https://)") }
             return
@@ -155,10 +161,19 @@ class HomeViewModel(
                     !lower.contains("localhost")
         }
 
+        fun normalizeUrl(raw: String): String {
+            var url = raw.trim().trim('"', '\'')
+            if (url.contains("threads.com", ignoreCase = true)) {
+                url = url.replace("threads.com", "threads.net", ignoreCase = true)
+            }
+            return url
+        }
+
         fun extractUrlFromText(text: String): String {
             val parts = text.split("\\s+".toRegex())
             for (part in parts) {
-                if (isValidUrl(part)) return part
+                val cleaned = part.trim().trim('"', '\'')
+                if (isValidUrl(cleaned)) return normalizeUrl(cleaned)
             }
             return ""
         }

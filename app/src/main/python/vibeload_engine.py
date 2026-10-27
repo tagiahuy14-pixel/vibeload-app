@@ -1,10 +1,12 @@
 import base64
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
+import urllib.parse
 import yt_dlp
 
 DEFAULT_HEADERS = {
@@ -54,11 +56,112 @@ def get_engine_version():
         "has_external_ffmpeg": ffmpeg_loc is not None
     }
 
+def clean_and_normalize_url(raw_url):
+    """
+    Clean and normalize media URL before passing to yt-dlp:
+    1. Strip leading/trailing whitespaces and quotation marks.
+    2. Normalize Threads domains: threads.com -> threads.net.
+    3. Strip non-essential tracking queries across platforms (Meta, TikTok, YouTube).
+    """
+    if not raw_url:
+        return ""
+    url = raw_url.strip().strip('"\'')
+
+    # Fix Threads domain (threads.com -> threads.net)
+    if "threads.com" in url.lower():
+        url = re.sub(r'https?://(?:www\.)?threads\.com', 'https://www.threads.net', url, flags=re.IGNORECASE)
+
+    # Strip non-essential tracking queries
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.query:
+            tracking_params = {
+                'xmt', 'slof', 'mibextid', 'fbclid', 'igsh', 'igshid',
+                'rdid', 'share_id', '_r', '_t', 'is_from_webapp',
+                'sender_device', 'sender_web_id', 'si', 'feature'
+            }
+            query_pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+            cleaned_pairs = [
+                (k, v) for k, v in query_pairs 
+                if k.lower() not in tracking_params and not k.lower().startswith('utm_')
+            ]
+            new_query = urllib.parse.urlencode(cleaned_pairs)
+            parsed = parsed._replace(query=new_query)
+            url = urllib.parse.urlunparse(parsed)
+    except Exception:
+        pass
+
+    return url
+
+def format_error_message(err_str, url=""):
+    """
+    Translate raw yt-dlp CLI errors into polite, user-friendly Vietnamese guidance.
+    Eliminates confusing CLI flags like '--cookies-from-browser' and internal stack traces.
+    """
+    err_lower = (err_str or "").lower()
+    url_lower = (url or "").lower()
+
+    # 1. YouTube Bot Detection / Security Challenge
+    if "confirm you're not a bot" in err_lower or "not a bot" in err_lower:
+        return "YouTube yêu cầu xác minh bảo mật hoặc mạng hiện tại đang bị hạn chế tạm thời. Vui lòng thử chuyển sang mạng 4G/Wi-Fi khác hoặc thử lại sau vài phút."
+
+    # 2. Instagram Story / Private / Cookies Required
+    if "instagram:story" in err_lower or "cookies-from-browser" in err_lower or ("instagram" in url_lower and ("unreachable" in err_lower or "cookie" in err_lower or "login" in err_lower)):
+        return "Tin (Story) hoặc bài viết Instagram này yêu cầu đăng nhập tài khoản để xem. Vui lòng thử tải các bài viết hoặc Reels công khai."
+
+    # 3. TikTok Photo / Slideshow Album
+    if "/photo/" in url_lower or ("tiktok" in url_lower and ("photo" in err_lower or "unsupported url" in err_lower)):
+        return "Liên kết này là bài đăng album ảnh (Photo Slide) của TikTok. VibeLoad hiện hỗ trợ tải các bài đăng Video TikTok. Vui lòng chọn bài viết định dạng video."
+
+    # 4. Facebook Private / Closed Group / Login Wall
+    if "cannot parse data" in err_lower or ("facebook" in url_lower and ("login" in err_lower or "unsupported url" in err_lower or "report this issue" in err_lower)):
+        return "Không thể lấy dữ liệu video từ Facebook. Bài viết có thể thuộc nhóm kín, ở chế độ riêng tư hoặc Facebook đang yêu cầu đăng nhập tài khoản."
+
+    # 5. Threads Invalid / Expired / Private Post
+    if "threads" in url_lower and ("unsupported url" in err_lower or "invalid_post" in err_lower or "404" in err_lower):
+        return "Bài viết trên Threads không tồn tại, đã bị xóa hoặc thuộc tài khoản riêng tư."
+
+    # 6. Video Unavailable / Deleted / Region Restricted
+    if "this video is unavailable" in err_lower or "video unavailable" in err_lower:
+        return "Video này hiện không khả dụng (đã bị xóa, ở chế độ riêng tư hoặc bị chặn tại quốc gia của bạn)."
+
+    # 7. General Private Content / Permission Denied
+    if "private video" in err_lower or "permission" in err_lower or "login required" in err_lower:
+        return "Nội dung này được đặt ở chế độ riêng tư hoặc yêu cầu quyền truy cập từ tác giả."
+
+    # 8. Rate Limiting / IP Blocked / HTTP 429
+    if "blocked" in err_lower or "too many requests" in err_lower or "429" in err_lower:
+        return "Địa chỉ mạng hiện tại tạm thời bị nền tảng giới hạn tần suất yêu cầu (Too Many Requests). Vui lòng đổi sang mạng 4G/Wi-Fi khác hoặc thử lại sau ít phút."
+
+    # 9. Age-Restricted / Member-Only
+    if "age-restricted" in err_lower or "members-only" in err_lower or "join this channel" in err_lower:
+        return "Video này giới hạn độ tuổi hoặc chỉ dành riêng cho hội viên trả phí của kênh."
+
+    # 10. Timeout / Network Connection Issue
+    if "timed out" in err_lower or "timeout" in err_lower or "connection reset" in err_lower:
+        return "Kết nối mạng tới máy chủ bị quá thời gian chờ (Timeout). Vui lòng kiểm tra lại kết nối Internet."
+
+    # 11. Unsupported URL
+    if "unsupported url" in err_lower:
+        return "Liên kết không được hỗ trợ hoặc không đúng định dạng. Vui lòng kiểm tra lại liên kết."
+
+    # General fallback cleanup
+    clean_err = re.sub(r'\[\w+\]\s*[^:]*:\s*', '', err_str).strip()
+    clean_err = re.sub(r'please report this issue.*', '', clean_err, flags=re.IGNORECASE).strip()
+    return clean_err if clean_err else "Không thể phân tích liên kết này."
+
 def analyze_url(url):
     """
     Analyze given media URL and return structured JSON metadata.
     Supports YouTube, TikTok, Facebook, Instagram, SoundCloud, etc.
     """
+    clean_url = clean_and_normalize_url(url)
+    target_url = clean_url
+
+    # For TikTok photo posts, attempt video rewrite first
+    if "/photo/" in clean_url.lower():
+        target_url = re.sub(r'/photo/(\d+)', r'/video/\1', clean_url)
+
     ffmpeg_loc = find_ffmpeg_location()
     ydl_opts = {
         'quiet': True,
@@ -68,13 +171,26 @@ def analyze_url(url):
         'socket_timeout': 20,
         'noplaylist': True, # Enforce 1-video per request (FR-01)
         'http_headers': DEFAULT_HEADERS,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'ios', 'web'],
+                'player_skip': ['configs', 'webpage']
+            }
+        }
     }
     if ffmpeg_loc:
         ydl_opts['ffmpeg_location'] = ffmpeg_loc
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+            try:
+                info = ydl.extract_info(target_url, download=False)
+            except Exception as initial_err:
+                if target_url != clean_url:
+                    info = ydl.extract_info(clean_url, download=False)
+                else:
+                    raise initial_err
+
             if not info:
                 return json.dumps({"success": False, "error": "Không tìm thấy dữ liệu phương tiện từ liên kết này."})
 
@@ -212,20 +328,20 @@ def analyze_url(url):
             return json.dumps(result)
 
     except yt_dlp.utils.DownloadError as e:
-        err_msg = str(e)
-        if "blocked" in err_msg.lower():
-            err_msg = "Địa chỉ IP hoặc thiết bị bị chặn bởi nền tảng. Vui lòng thử lại sau."
-        elif "login" in err_msg.lower() or "private" in err_msg.lower():
-            err_msg = "Nội dung này là riêng tư hoặc yêu cầu đăng nhập."
-        return json.dumps({"success": False, "error": f"Lỗi phân tích: {err_msg}"})
+        return json.dumps({"success": False, "error": format_error_message(str(e), url)})
     except Exception as e:
-        return json.dumps({"success": False, "error": f"Lỗi hệ thống: {str(e)}"})
+        return json.dumps({"success": False, "error": format_error_message(str(e), url)})
 
 def download_stream(url, format_spec, output_path, progress_listener=None):
     """
     Download given stream into output_path with progress hook.
     progress_listener is a Python callable or Chaquopy Java proxy with onProgress(...) and isCancelled() -> bool.
     """
+    clean_url = clean_and_normalize_url(url)
+    target_url = clean_url
+    if "/photo/" in clean_url.lower():
+        target_url = re.sub(r'/photo/(\d+)', r'/video/\1', clean_url)
+
     def hook(d):
         if progress_listener:
             try:
@@ -266,6 +382,12 @@ def download_stream(url, format_spec, output_path, progress_listener=None):
         'socket_timeout': 30,
         'progress_hooks': [hook],
         'http_headers': DEFAULT_HEADERS,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'ios', 'web'],
+                'player_skip': ['configs', 'webpage']
+            }
+        }
     }
 
     if ffmpeg_loc:
@@ -275,7 +397,7 @@ def download_stream(url, format_spec, output_path, progress_listener=None):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+            ydl.download([target_url])
 
         actual_path = output_path
         if not os.path.exists(output_path):
@@ -294,7 +416,7 @@ def download_stream(url, format_spec, output_path, progress_listener=None):
     except Exception as e:
         if "DOWNLOAD_CANCELLED" in str(e):
             return json.dumps({"success": False, "cancelled": True, "error": "Tác vụ đã bị hủy"})
-        return json.dumps({"success": False, "cancelled": False, "error": str(e)})
+        return json.dumps({"success": False, "cancelled": False, "error": format_error_message(str(e), url)})
 
 def verify_file_streams(file_path):
     """

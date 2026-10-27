@@ -39,4 +39,18 @@ class HomeViewModelUnitTest {
         val extracted = HomeViewModel.extractUrlFromText(plainText)
         assertEquals("", extracted)
     }
+
+    @Test
+    fun normalizeUrl_convertsThreadsComToThreadsNet() {
+        val raw = "https://www.threads.com/@user/post/DHU63s2zn3y"
+        val normalized = HomeViewModel.normalizeUrl(raw)
+        assertEquals("https://www.threads.net/@user/post/DHU63s2zn3y", normalized)
+    }
+
+    @Test
+    fun normalizeUrl_stripsSurroundingQuotesAndWhitespace() {
+        val raw = "  \"https://www.youtube.com/watch?v=123\" "
+        val normalized = HomeViewModel.normalizeUrl(raw)
+        assertEquals("https://www.youtube.com/watch?v=123", normalized)
+    }
 }
