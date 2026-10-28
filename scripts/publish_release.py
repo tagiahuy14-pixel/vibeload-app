@@ -202,12 +202,13 @@ def main():
 `{sha256}`
 
 ### Tính năng & Thay đổi mới:
-- **Khắc phục quyền cập nhật OTA**: Khai báo quyền `REQUEST_INSTALL_PACKAGES` trong Manifest và tự động mở màn hình cấp quyền Cài đặt ứng dụng không rõ nguồn, sửa dứt điểm lỗi *"VibeLoad doesn't have permission to install items"*.
-- **Hỗ trợ tải toàn bộ Album ảnh TikTok (Photo Slides / Carousel)**: Tự động trích xuất toàn bộ ảnh gốc chất lượng cao theo đúng thứ tự 1..N và tải kèm nhạc nền MP3.
-- **Tiến trình tải theo ảnh trực quan**: Hiển thị `Đang tải X/Y ảnh` và lưu vào thư mục riêng `Pictures/VibeLoad/TikTok_<postId>/`.
-- **Hỗ trợ tải ảnh Facebook & OpenGraph**: Nhận diện ảnh bài đăng Facebook chất lượng cao qua CDN `scontent...fbcdn.net`.
-- **Hỗ trợ tải ảnh đa định dạng**: JPG, PNG, WebP, GIF, AVIF, BMP, TIFF, HEIC, SVG vector, ICO với kiểm tra Magic Bytes chống lưu nhầm HTML.
-- **Duy trì đầy đủ chức năng tải video MP4 & âm thanh MP3**: Hỗ trợ YouTube, TikTok, Facebook, Instagram, Threads, SoundCloud với DASH muxing FFmpeg.
+- **Hỗ trợ giao diện động Sáng / Tối / Theo hệ thống**: Toàn bộ trang chủ và ứng dụng chuyển đổi màu chuẩn xác, không còn bị kẹt giao diện tối.
+- **Xem trước toàn bộ ảnh trong Album**: Khung preview hỗ trợ lật xem từng ảnh với nút mũi tên Trái/Phải và huy hiệu đếm ảnh (`X / Y`).
+- **Chọn từng ảnh để tải (Multi-select Checkboxes)**: Thanh cuộn ngang hiển thị ảnh thu nhỏ kèm Checkbox để tick chọn các ảnh cần tải (ví dụ 1, 3, 5, 7), hỗ trợ nút *"Chọn tất cả"* và *"Bỏ chọn"*.
+- **Tải nhạc nền bài đăng (MP3)**: Hỗ trợ tùy chọn tải riêng tệp âm thanh MP3 đính kèm của album ảnh TikTok.
+- **Sửa triệt để lỗi tải MP3 trên TikTok**: Khắc phục lỗi định dạng âm thanh `bestaudio`, ưu tiên stream gốc và chuyển đổi MP3 chất lượng cao qua FFmpeg.
+- **Tự động nhận diện Video hay Âm thanh (MP3)**: Dán link nhạc hoặc âm thanh tự động chuyển sang tab *"Âm thanh (MP3)"* và chọn sẵn bitrate 128 kbps.
+- **Cập nhật OTA mượt mà**: Có sẵn quyền cài đặt và tự động kiểm tra phiên bản mới.
 """
 
     if status_code == 200 and isinstance(release_data, dict) and "id" in release_data:
