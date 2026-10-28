@@ -51,7 +51,8 @@ class DownloadCoordinator(
         url: String,
         metadata: MediaMetadata,
         selectedFormat: FormatOption,
-        customFilename: String
+        customFilename: String,
+        selectedImageUrls: List<String> = emptyList()
     ): Result<Unit> {
         val active = _currentTask.value
         if (active != null && active.status.isActive()) {
@@ -73,8 +74,12 @@ class DownloadCoordinator(
         }
         val safeName = storageRepository.sanitizeFilename(customFilename, extension)
 
-        val isBatchAlbum = selectedFormat.isImage && (selectedFormat.formatId == "ALL_IMAGES" || selectedFormat.label.contains("Tải tất cả", ignoreCase = true))
-        val totalCount = if (isBatchAlbum) metadata.imageOptions.size else 1
+        val isBatchAlbum = selectedFormat.isImage && (selectedImageUrls.isNotEmpty() || selectedFormat.formatId == "ALL_IMAGES" || selectedFormat.label.contains("Tải tất cả", ignoreCase = true))
+        val totalCount = when {
+            selectedImageUrls.isNotEmpty() -> selectedImageUrls.size
+            isBatchAlbum -> metadata.imageOptions.count { it.formatId != "ALL_IMAGES" }
+            else -> 1
+        }
 
         val task = DownloadTask(
             id = taskId,
@@ -85,7 +90,8 @@ class DownloadCoordinator(
             status = DownloadStatus.RESOLVING,
             totalBytes = selectedFormat.filesize,
             currentItemIndex = 1,
-            totalItemCount = totalCount
+            totalItemCount = totalCount,
+            selectedImageUrls = selectedImageUrls
         )
 
         _currentTask.value = task
@@ -136,13 +142,21 @@ class DownloadCoordinator(
                 val finalFileToPublish: File
 
                 if (task.selectedFormat.isImage) {
-                    val isBatchAlbum = task.selectedFormat.formatId == "ALL_IMAGES" ||
+                    val realImageOptions = metadata.imageOptions.filter { it.formatId != "ALL_IMAGES" }
+                    val isBatchAlbum = task.selectedImageUrls.isNotEmpty() ||
+                            task.selectedFormat.formatId == "ALL_IMAGES" ||
                             task.selectedFormat.label.contains("Tải tất cả", ignoreCase = true)
 
-                    val imagesToDownload = if (isBatchAlbum) {
-                        metadata.imageOptions.ifEmpty { listOf(task.selectedFormat) }
-                    } else {
-                        listOf(task.selectedFormat)
+                    val imagesToDownload = when {
+                        task.selectedImageUrls.isNotEmpty() -> {
+                            realImageOptions.filter { it.formatId in task.selectedImageUrls }
+                        }
+                        isBatchAlbum -> {
+                            if (realImageOptions.isNotEmpty()) realImageOptions else listOf(task.selectedFormat)
+                        }
+                        else -> {
+                            listOf(task.selectedFormat)
+                        }
                     }
 
                     val totalImages = imagesToDownload.size
@@ -476,10 +490,12 @@ class DownloadCoordinator(
                         override fun isCancelled(): Boolean = isCancelled || isPaused
                     }
 
-                    val formatSpec = if (task.selectedFormat.isOriginalAudio) {
+                    val formatSpec = if (task.selectedFormat.formatId.startsWith("http")) {
+                        task.selectedFormat.formatId
+                    } else if (task.selectedFormat.isOriginalAudio) {
                         if (task.selectedFormat.formatId.isNotEmpty()) task.selectedFormat.formatId else "bestaudio/best"
                     } else {
-                        "bestaudio[ext=m4a]/bestaudio/best"
+                        "bestaudio/best"
                     }
 
                     val dlResult = downloadEngine.downloadStream(

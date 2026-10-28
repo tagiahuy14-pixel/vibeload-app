@@ -11,6 +11,7 @@ data class MediaMetadata(
     val audioOptions: List<FormatOption>,
     val imageOptions: List<FormatOption> = emptyList(),
     val isImageOnly: Boolean = false,
+    val isAudioOnly: Boolean = false,
     val postId: String = ""
 ) {
     fun getFormattedDuration(): String {

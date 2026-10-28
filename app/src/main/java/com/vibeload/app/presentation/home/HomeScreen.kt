@@ -3,10 +3,13 @@ package com.vibeload.app.presentation.home
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +41,7 @@ import com.vibeload.app.data.local.entity.isImage
 import com.vibeload.app.domain.model.FormatOption
 import com.vibeload.app.presentation.library.LibrarySortOrder
 import com.vibeload.app.presentation.library.LibraryViewModel
+import com.vibeload.app.presentation.theme.AccentPurple
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -56,7 +60,6 @@ fun HomeScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
-    var formatCategoryTab by remember { mutableIntStateOf(0) } // 0: Video, 1: MP3, 2: Gốc
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
     val gradientPrimary = remember {
@@ -74,7 +77,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF090D16))
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -93,7 +96,7 @@ fun HomeScreen(
                         text = "Tải ",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = "Media",
@@ -104,9 +107,9 @@ fun HomeScreen(
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Tải video và âm thanh từ nhiều nền tảng",
+                    text = "Tải video, âm thanh và ảnh đa nền tảng",
                     fontSize = 13.sp,
-                    color = Color(0xFF94A3B8)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -116,8 +119,8 @@ fun HomeScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF131926))
-                        .border(1.dp, Color(0xFF26324B), CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                         .clickable {
                             Toast.makeText(context, "VibeLoad Pro — 100% On-Device & Miễn phí", Toast.LENGTH_SHORT).show()
                         },
@@ -136,15 +139,15 @@ fun HomeScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF131926))
-                        .border(1.dp, Color(0xFF26324B), CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                         .clickable { onNavigateToSettings() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Cài đặt",
-                        tint = Color(0xFFCBD5E1),
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -156,8 +159,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF111622))
-                .border(1.dp, Color(0xFF26324B), RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
                 .padding(horizontal = 14.dp, vertical = 4.dp)
         ) {
             Row(
@@ -167,7 +170,7 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Default.Link,
                     contentDescription = null,
-                    tint = Color(0xFF38BDF8),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp)
                 )
 
@@ -179,17 +182,17 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f),
                     placeholder = {
                         Text(
-                            text = "Dán liên kết video tại đây...",
-                            color = Color(0xFF64748B),
+                            text = "Dán liên kết video, âm thanh hoặc ảnh tại đây...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp
                         )
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
-                        cursorColor = Color(0xFF38BDF8)
+                        cursorColor = MaterialTheme.colorScheme.primary
                     ),
                     singleLine = true
                 )
@@ -202,7 +205,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Cancel,
                             contentDescription = "Xóa",
-                            tint = Color(0xFF64748B),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -214,7 +217,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.ContentPaste,
                             contentDescription = "Dán",
-                            tint = Color(0xFF38BDF8),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -359,31 +362,102 @@ fun HomeScreen(
                         .padding(top = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    val realImages = meta.imageOptions.filter { it.formatId != "ALL_IMAGES" }
+                    val hasMultipleImages = meta.isImageOnly && realImages.size > 1
+                    val previewIndex = if (hasMultipleImages) uiState.previewImageIndex.coerceIn(0, (realImages.size - 1).coerceAtLeast(0)) else 0
+                    val currentPreviewUrl = if (hasMultipleImages) {
+                        realImages.getOrNull(previewIndex)?.formatId ?: meta.thumbnail
+                    } else {
+                        meta.thumbnail
+                    }
+
                     // Preview Card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF131926)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26324B))
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
                         Column {
-                            if (meta.thumbnail.isNotEmpty()) {
-                                AsyncImage(
-                                    model = meta.thumbnail,
-                                    contentDescription = meta.title,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(180.dp)
-                                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
+                            // Large preview image box
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(if (meta.isImageOnly) 240.dp else 180.dp)
+                                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                                    .background(Color.Black),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (currentPreviewUrl.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = currentPreviewUrl,
+                                        contentDescription = meta.title,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = if (meta.isImageOnly) ContentScale.Fit else ContentScale.Crop
+                                    )
+                                }
+
+                                if (hasMultipleImages) {
+                                    // Prev button
+                                    if (previewIndex > 0) {
+                                        IconButton(
+                                            onClick = { viewModel.setPreviewImageIndex(previewIndex - 1) },
+                                            modifier = Modifier
+                                                .align(Alignment.CenterStart)
+                                                .padding(8.dp)
+                                                .size(36.dp)
+                                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ChevronLeft,
+                                                contentDescription = "Ảnh trước",
+                                                tint = Color.White
+                                            )
+                                        }
+                                    }
+
+                                    // Next button
+                                    if (previewIndex < realImages.size - 1) {
+                                        IconButton(
+                                            onClick = { viewModel.setPreviewImageIndex(previewIndex + 1) },
+                                            modifier = Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .padding(8.dp)
+                                                .size(36.dp)
+                                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ChevronRight,
+                                                contentDescription = "Ảnh tiếp theo",
+                                                tint = Color.White
+                                            )
+                                        }
+                                    }
+
+                                    // Counter pill badge
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(10.dp)
+                                            .background(Color.Black.copy(alpha = 0.65f), RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "${previewIndex + 1} / ${realImages.size}",
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
+
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = meta.title,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -393,28 +467,25 @@ fun HomeScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        val imageOpt = uiState.selectedFormat ?: meta.imageOptions.firstOrNull()
-                                        val realCount = meta.imageOptions.count { it.formatId != "ALL_IMAGES" }
+                                        val realCount = realImages.size
                                         val contentLabel = if (meta.platform.equals("tiktok", ignoreCase = true)) {
                                             if (realCount > 1) "Album ảnh TikTok ($realCount ảnh)" else "Ảnh TikTok"
                                         } else if (realCount > 1) {
                                             "Album ảnh ($realCount ảnh)"
                                         } else {
-                                            "Ảnh (${imageOpt?.ext?.uppercase() ?: "JPG"})"
+                                            "Ảnh (${uiState.selectedFormat?.ext?.uppercase() ?: "JPG"})"
                                         }
                                         Text(
                                             text = "Loại: $contentLabel",
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF38BDF8)
+                                            color = MaterialTheme.colorScheme.primary
                                         )
-                                        if (imageOpt != null && imageOpt.filesize > 0) {
-                                            val mb = imageOpt.filesize / (1024.0 * 1024.0)
-                                            val sizeStr = if (mb >= 1.0) String.format(Locale.US, "%.1f MB", mb) else String.format(Locale.US, "%.0f KB", imageOpt.filesize / 1024.0)
+                                        if (hasMultipleImages) {
                                             Text(
-                                                text = "Kích thước: $sizeStr",
+                                                text = "Đang xem ảnh ${previewIndex + 1}",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = Color(0xFF94A3B8)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -426,13 +497,13 @@ fun HomeScreen(
                                         Text(
                                             text = "Tác giả: ${meta.uploader}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = Color(0xFF94A3B8)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
                                             text = meta.getFormattedDuration(),
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFF38BDF8)
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
@@ -441,23 +512,160 @@ fun HomeScreen(
                     }
 
                     if (meta.isImageOnly) {
-                        Text(
-                            text = "Định dạng ảnh",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            meta.imageOptions.forEach { opt ->
-                                FormatChip(
-                                    option = opt,
-                                    isSelected = uiState.selectedFormat == opt,
-                                    onClick = { viewModel.selectFormat(opt) }
-                                )
+                        if (hasMultipleImages) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Chọn ảnh muốn tải (${uiState.selectedImageIndices.size}/${realImages.size} ảnh)",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        TextButton(
+                                            onClick = { viewModel.selectAllImages() },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Chọn tất cả", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                        }
+                                        TextButton(
+                                            onClick = { viewModel.deselectAllImages() },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Bỏ chọn", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Horizontal thumbnail gallery
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    itemsIndexed(realImages) { idx, opt ->
+                                        val isChecked = uiState.selectedImageIndices.contains(idx)
+                                        val isCurrentPreview = previewIndex == idx
+
+                                        Card(
+                                            modifier = Modifier
+                                                .width(86.dp)
+                                                .clickable {
+                                                    viewModel.setPreviewImageIndex(idx)
+                                                },
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = BorderStroke(
+                                                width = if (isCurrentPreview) 2.dp else 1.dp,
+                                                color = if (isCurrentPreview) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                            ),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(86.dp)
+                                                ) {
+                                                    AsyncImage(
+                                                        model = opt.formatId,
+                                                        contentDescription = "Ảnh ${idx + 1}",
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        contentScale = ContentScale.Crop
+                                                    )
+
+                                                    // Checkbox in corner
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .padding(4.dp)
+                                                            .size(24.dp)
+                                                            .clip(CircleShape)
+                                                            .background(if (isChecked) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.5f))
+                                                            .border(1.dp, Color.White, CircleShape)
+                                                            .clickable {
+                                                                viewModel.toggleSelectImage(idx)
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        if (isChecked) {
+                                                            Icon(
+                                                                Icons.Default.Check,
+                                                                contentDescription = "Đã chọn",
+                                                                tint = Color.White,
+                                                                modifier = Modifier.size(16.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                Text(
+                                                    text = "Ảnh ${idx + 1}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (isCurrentPreview) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (isCurrentPreview) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.padding(vertical = 4.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Background music option if available in photo post
+                        if (meta.audioOptions.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            val isMusicSelected = uiState.selectedFormat?.isImage == false
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val mp3Opt = meta.audioOptions.firstOrNull { !it.isOriginalAudio && it.bitrateKbps == 128 } ?: meta.audioOptions.firstOrNull()
+                                        if (mp3Opt != null) {
+                                            viewModel.selectFormat(mp3Opt)
+                                        }
+                                    },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, if (isMusicSelected) AccentPurple else MaterialTheme.colorScheme.outlineVariant),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = AccentPurple)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Nhạc nền bài đăng (MP3)",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Tải riêng tệp âm thanh MP3 đính kèm của bài viết",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    RadioButton(
+                                        selected = isMusicSelected,
+                                        onClick = {
+                                            val mp3Opt = meta.audioOptions.firstOrNull { !it.isOriginalAudio && it.bitrateKbps == 128 } ?: meta.audioOptions.firstOrNull()
+                                            if (mp3Opt != null) {
+                                                viewModel.selectFormat(mp3Opt)
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -466,30 +674,30 @@ fun HomeScreen(
                             text = stringResource(R.string.home_format_selection_title),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         TabRow(
-                            selectedTabIndex = formatCategoryTab,
+                            selectedTabIndex = uiState.formatCategoryTab,
                             modifier = Modifier.clip(RoundedCornerShape(12.dp)),
-                            containerColor = Color(0xFF131926)
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Tab(
-                                selected = formatCategoryTab == 0,
-                                onClick = { formatCategoryTab = 0 },
-                                text = { Text("Video (MP4)", color = if (formatCategoryTab == 0) Color.White else Color(0xFF94A3B8)) },
-                                icon = { Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (formatCategoryTab == 0) Color(0xFF38BDF8) else Color(0xFF64748B)) }
+                                selected = uiState.formatCategoryTab == 0,
+                                onClick = { viewModel.setFormatCategoryTab(0) },
+                                text = { Text("Video (MP4)", color = if (uiState.formatCategoryTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) },
+                                icon = { Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (uiState.formatCategoryTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
                             )
                             Tab(
-                                selected = formatCategoryTab == 1,
-                                onClick = { formatCategoryTab = 1 },
-                                text = { Text("Âm thanh (MP3)", color = if (formatCategoryTab == 1) Color.White else Color(0xFF94A3B8)) },
-                                icon = { Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (formatCategoryTab == 1) Color(0xFFA78BFA) else Color(0xFF64748B)) }
+                                selected = uiState.formatCategoryTab == 1,
+                                onClick = { viewModel.setFormatCategoryTab(1) },
+                                text = { Text("Âm thanh (MP3)", color = if (uiState.formatCategoryTab == 1) AccentPurple else MaterialTheme.colorScheme.onSurfaceVariant) },
+                                icon = { Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (uiState.formatCategoryTab == 1) AccentPurple else MaterialTheme.colorScheme.onSurfaceVariant) }
                             )
                             Tab(
-                                selected = formatCategoryTab == 2,
-                                onClick = { formatCategoryTab = 2 },
-                                text = { Text("Gốc", color = if (formatCategoryTab == 2) Color.White else Color(0xFF94A3B8)) }
+                                selected = uiState.formatCategoryTab == 2,
+                                onClick = { viewModel.setFormatCategoryTab(2) },
+                                text = { Text("Gốc", color = if (uiState.formatCategoryTab == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
                             )
                         }
 
@@ -499,7 +707,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            when (formatCategoryTab) {
+                            when (uiState.formatCategoryTab) {
                                 0 -> {
                                     meta.videoOptions.forEach { opt ->
                                         FormatChip(
@@ -536,7 +744,7 @@ fun HomeScreen(
                         text = stringResource(R.string.home_filename_label),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     OutlinedTextField(
                         value = uiState.customFilename,
@@ -545,40 +753,59 @@ fun HomeScreen(
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = Color(0xFF38BDF8),
-                            unfocusedBorderColor = Color(0xFF26324B),
-                            focusedContainerColor = Color(0xFF131926),
-                            unfocusedContainerColor = Color(0xFF131926)
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     )
 
                     // Download Button
+                    val isAudioSelected = uiState.selectedFormat?.isVideo == false && uiState.selectedFormat?.isImage == false
+                    val isImageDownload = meta.isImageOnly && !isAudioSelected
+                    val canDownload = if (isImageDownload && hasMultipleImages) {
+                        uiState.selectedImageIndices.isNotEmpty()
+                    } else {
+                        true
+                    }
+
                     Button(
                         onClick = {
                             viewModel.startDownload(onSuccess = onNavigateToDownloading)
                         },
+                        enabled = canDownload,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (uiState.selectedFormat?.formatId == "ALL_IMAGES") {
-                                val c = meta.imageOptions.count { it.formatId != "ALL_IMAGES" }
-                                "Tải tất cả ảnh ($c)"
-                            } else if (meta.isImageOnly || uiState.selectedFormat?.isImage == true) {
-                                "Tải ${uiState.selectedFormat?.label ?: "ảnh"}"
-                            } else {
-                                stringResource(R.string.home_download_button)
+                            text = when {
+                                isAudioSelected -> "Tải âm thanh MP3 (${uiState.selectedFormat?.bitrateKbps ?: 128} kbps)"
+                                isImageDownload && hasMultipleImages -> {
+                                    val selCount = uiState.selectedImageIndices.size
+                                    if (selCount == 0) {
+                                        "Chọn ít nhất 1 ảnh để tải"
+                                    } else if (selCount == realImages.size) {
+                                        "Tải tất cả (${realImages.size} ảnh)"
+                                    } else {
+                                        "Tải $selCount ảnh đã chọn"
+                                    }
+                                }
+                                meta.isImageOnly || uiState.selectedFormat?.isImage == true -> "Tải ${uiState.selectedFormat?.label ?: "ảnh"}"
+                                else -> stringResource(R.string.home_download_button)
                             },
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = Color.White
+                            color = if (canDownload) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -770,7 +997,7 @@ fun HomeScreen(
         var newName by remember { mutableStateOf(item.fileName) }
         AlertDialog(
             onDismissRequest = { libraryViewModel.cancelRename() },
-            title = { Text("Đổi tên tệp", color = Color.White) },
+            title = { Text("Đổi tên tệp", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 OutlinedTextField(
                     value = newName,
@@ -796,7 +1023,7 @@ fun HomeScreen(
                     Text("Hủy")
                 }
             },
-            containerColor = Color(0xFF131926)
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -805,11 +1032,11 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { libraryViewModel.cancelDelete() },
             icon = { Icon(Icons.Default.DeleteForever, contentDescription = null, tint = Color(0xFFEF4444)) },
-            title = { Text("Xóa tệp?", color = Color.White) },
+            title = { Text("Xóa tệp?", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Text(
                     text = "Bạn có chắc muốn xóa tệp \"${item.fileName}\"? Tệp sẽ bị xóa khỏi bộ nhớ máy.",
-                    color = Color(0xFFCBD5E1)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             confirmButton = {
@@ -825,7 +1052,7 @@ fun HomeScreen(
                     Text("Hủy")
                 }
             },
-            containerColor = Color(0xFF131926)
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -860,7 +1087,7 @@ fun PlatformIcon(
         Text(
             text = label,
             fontSize = 11.sp,
-            color = Color(0xFFCBD5E1),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium
         )
     }
@@ -875,8 +1102,8 @@ fun FilterPill(
     onClick: () -> Unit
 ) {
     val gradient = Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF7C3AED)))
-    val bgColor = if (isSelected) Color.Transparent else Color(0xFF131926)
-    val borderColor = if (isSelected) Color.Transparent else Color(0xFF26324B)
+    val bgColor = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.surface
+    val borderColor = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outlineVariant
 
     Box(
         modifier = Modifier
@@ -893,7 +1120,7 @@ fun FilterPill(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) Color.White else Color(0xFF94A3B8),
+                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -901,7 +1128,7 @@ fun FilterPill(
                 text = if (count != null) "$title $count" else title,
                 fontSize = 13.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) Color.White else Color(0xFF94A3B8)
+                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -943,9 +1170,9 @@ fun VibeMediaCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF131926))
-            .border(1.dp, Color(0xFF1F293D), RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131926))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             // Top row: thumbnail + info + menu
@@ -958,7 +1185,7 @@ fun VibeMediaCard(
                     modifier = Modifier
                         .size(68.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF1E2434)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     if (item.thumbnailUri.isNotEmpty()) {
@@ -1058,7 +1285,7 @@ fun VibeMediaCard(
                     Text(
                         text = typeLabel,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1066,7 +1293,7 @@ fun VibeMediaCard(
                     Text(
                         text = "$formattedDate • $formattedSize",
                         fontSize = 11.sp,
-                        color = Color(0xFF64748B)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -1079,7 +1306,7 @@ fun VibeMediaCard(
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Tùy chọn",
-                            tint = Color(0xFF94A3B8)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -1230,9 +1457,9 @@ fun FormatChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isSelected) Color(0xFF1E3A8A) else Color(0xFF131926)
-    val borderColor = if (isSelected) Color(0xFF38BDF8) else Color(0xFF26324B)
-    val textColor = if (isSelected) Color.White else Color(0xFFCBD5E1)
+    val bgColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    val textColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
 
     Box(
         modifier = Modifier

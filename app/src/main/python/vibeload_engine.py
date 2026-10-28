@@ -191,7 +191,48 @@ def extract_tiktok_via_tikwm(url):
                 d = res["data"]
                 images = d.get("images", [])
                 if not images:
-                    return None
+                    # Fallback for TikTok Video or TikTok Music when yt-dlp is restricted
+                    video_url = d.get("hdplay") or d.get("play")
+                    cover = d.get("cover") or ""
+                    duration = d.get("duration") or 0
+                    video_options = []
+                    if video_url:
+                        video_options.append({
+                            "format_id": video_url,
+                            "resolution": "HD (Không logo)",
+                            "height": 1080,
+                            "width": 1920,
+                            "ext": "mp4",
+                            "filesize": 0,
+                            "vcodec": "h264",
+                            "acodec": "aac",
+                            "needs_merge": False
+                        })
+                    audio_options = []
+                    if music_url:
+                        audio_options.append({
+                            "format_id": music_url,
+                            "ext": "mp3",
+                            "abr": 128,
+                            "filesize": 0,
+                            "acodec": "mp3"
+                        })
+                    is_audio_only = "/music/" in url.lower() or (len(video_options) == 0 and len(audio_options) > 0)
+                    return {
+                        "success": True,
+                        "id": str(d.get("id") or ""),
+                        "url": url,
+                        "title": d.get("title") or "TikTok",
+                        "thumbnail": cover,
+                        "uploader": d.get("author", {}).get("nickname") or d.get("author", {}).get("unique_id") or "TikTok",
+                        "duration": duration,
+                        "platform": "tiktok",
+                        "video_options": video_options if not is_audio_only else [],
+                        "audio_options": audio_options,
+                        "image_options": [],
+                        "is_image_only": False,
+                        "is_audio_only": is_audio_only
+                    }
 
                 title = d.get("title") or "TikTok Ảnh"
                 author = d.get("author", {}).get("nickname") or d.get("author", {}).get("unique_id") or "TikTok"
@@ -424,8 +465,8 @@ def analyze_url(url):
     clean_url = clean_and_normalize_url(url)
     clean_url = resolve_redirect_if_needed(clean_url)
 
-    # For TikTok photo posts or shortlinks, attempt photo extraction first
-    if "/photo/" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "vm.tiktok.com" in clean_url.lower():
+    # For TikTok photo posts, shortlinks, or music links, attempt specialized extractor first
+    if "/photo/" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "vm.tiktok.com" in clean_url.lower() or "/music/" in clean_url.lower():
         tiktok_photo_res = extract_tiktok_photos(clean_url)
         if tiktok_photo_res:
             return json.dumps(tiktok_photo_res)
@@ -595,7 +636,8 @@ def analyze_url(url):
                 "duration": duration,
                 "platform": extractor,
                 "video_options": video_options,
-                "audio_options": audio_options
+                "audio_options": audio_options,
+                "is_audio_only": len(video_options) == 0 and len(audio_options) > 0
             }
             return json.dumps(result)
 

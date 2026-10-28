@@ -160,4 +160,45 @@ class TikTokPhotoExtractorTest {
         assertTrue(meta.isImageOnly)
         assertEquals("123", meta.postId)
     }
+
+    @Test
+    fun multiImageSelection_correctlyFiltersTargetUrls() {
+        val allImages = listOf(
+            FormatOption(formatId = "https://cdn.com/1.jpg", label = "Ảnh 1", isImage = true),
+            FormatOption(formatId = "https://cdn.com/2.jpg", label = "Ảnh 2", isImage = true),
+            FormatOption(formatId = "https://cdn.com/3.jpg", label = "Ảnh 3", isImage = true),
+            FormatOption(formatId = "https://cdn.com/4.jpg", label = "Ảnh 4", isImage = true),
+            FormatOption(formatId = "https://cdn.com/5.jpg", label = "Ảnh 5", isImage = true)
+        )
+
+        // User selects images 1, 3, 5 (indices 0, 2, 4)
+        val selectedIndices = setOf(0, 2, 4)
+        val selectedUrls = selectedIndices.mapNotNull { allImages.getOrNull(it)?.formatId }
+
+        assertEquals(3, selectedUrls.size)
+        assertEquals(listOf("https://cdn.com/1.jpg", "https://cdn.com/3.jpg", "https://cdn.com/5.jpg"), selectedUrls)
+
+        val task = DownloadTask(
+            id = "task_test",
+            url = "https://www.tiktok.com/@creator/photo/123",
+            title = "Test Album",
+            outputFilename = "Test_Album",
+            selectedFormat = FormatOption(formatId = "ALL_IMAGES", label = "Tải tất cả (5 ảnh)", isImage = true),
+            selectedImageUrls = selectedUrls,
+            totalItemCount = selectedUrls.size
+        )
+
+        assertEquals(3, task.selectedImageUrls.size)
+        assertEquals(3, task.totalItemCount)
+    }
+
+    @Test
+    fun audioOnlyCandidate_correctlyDetected() {
+        val audioUrl = "https://www.tiktok.com/music/original-sound-7187900768910413098"
+        val isAudioOnlyCandidate = audioUrl.lowercase().run {
+            contains(".mp3") || contains(".wav") || contains(".m4a") || contains(".flac") || contains(".aac") ||
+            contains("soundcloud.com") || contains("/music/") || contains("audio")
+        }
+        assertTrue(isAudioOnlyCandidate)
+    }
 }

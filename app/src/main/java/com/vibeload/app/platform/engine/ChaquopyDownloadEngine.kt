@@ -87,11 +87,12 @@ class ChaquopyDownloadEngine : DownloadEngine {
             }
 
             // Always add MP3 bitrate choices (128, 192, 256, 320 kbps as required by FR-14)
+            val baseAudioFormatId = audioOptions.firstOrNull()?.formatId?.takeIf { it.startsWith("http") } ?: "bestaudio"
             val mp3Bitrates = listOf(128, 192, 256, 320)
             mp3Bitrates.forEach { br ->
                 audioOptions.add(
                     FormatOption(
-                        formatId = "bestaudio",
+                        formatId = baseAudioFormatId,
                         label = "MP3 (${br} kbps)",
                         resolution = "",
                         ext = "mp3",
@@ -128,6 +129,7 @@ class ChaquopyDownloadEngine : DownloadEngine {
             }
 
             val isImageOnly = json.optBoolean("is_image_only", false) || (videoOptions.isEmpty() && imageOptions.isNotEmpty())
+            val isAudioOnly = json.optBoolean("is_audio_only", false) || (videoOptions.isEmpty() && audioOptions.isNotEmpty() && !isImageOnly)
             val postId = json.optString("id", "")
 
             val metadata = MediaMetadata(
@@ -141,6 +143,7 @@ class ChaquopyDownloadEngine : DownloadEngine {
                 audioOptions = audioOptions,
                 imageOptions = imageOptions,
                 isImageOnly = isImageOnly,
+                isAudioOnly = isAudioOnly,
                 postId = postId
             )
 

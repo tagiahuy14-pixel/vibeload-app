@@ -23,7 +23,10 @@ data class HomeUiState(
     val selectedFormat: FormatOption? = null,
     val customFilename: String = "",
     val errorMessage: String? = null,
-    val isStartingDownload: Boolean = false
+    val isStartingDownload: Boolean = false,
+    val selectedImageIndices: Set<Int> = emptySet(),
+    val previewImageIndex: Int = 0,
+    val formatCategoryTab: Int = 0
 )
 
 class HomeViewModel(
@@ -160,8 +163,30 @@ class HomeViewModel(
                     meta = meta.copy(imageOptions = listOf(allImagesOption) + meta.imageOptions)
                 }
 
+                val isAudioCandidate = meta.isAudioOnly || meta.videoOptions.isEmpty() || url.lowercase().run {
+                    contains(".mp3") || contains(".wav") || contains(".m4a") || contains(".flac") || contains(".aac") ||
+                    contains("soundcloud.com") || contains("/music/") || contains("audio")
+                }
+
+                val realImages = meta.imageOptions.filter { it.formatId != "ALL_IMAGES" }
+                val initialSelectedIndices = if (meta.isImageOnly && realImages.isNotEmpty()) {
+                    realImages.indices.toSet()
+                } else {
+                    emptySet()
+                }
+
+                val targetTab = when {
+                    meta.isImageOnly -> 0
+                    isAudioCandidate -> 1
+                    else -> 0
+                }
+
                 val defaultFmt = if (meta.isImageOnly) {
                     meta.imageOptions.firstOrNull() ?: meta.audioOptions.firstOrNull()
+                } else if (isAudioCandidate) {
+                    meta.audioOptions.firstOrNull { !it.isOriginalAudio && it.bitrateKbps == 128 }
+                        ?: meta.audioOptions.firstOrNull()
+                        ?: meta.videoOptions.firstOrNull()
                 } else {
                     meta.videoOptions.firstOrNull { it.height == 720 }
                         ?: meta.videoOptions.lastOrNull()
@@ -169,16 +194,19 @@ class HomeViewModel(
                         ?: meta.imageOptions.firstOrNull()
                 }
 
-                val defaultExt = defaultFmt?.ext ?: "mp4"
+                val defaultExt = defaultFmt?.ext ?: (if (isAudioCandidate) "mp3" else "mp4")
                 val sanitizedName = storageRepository.sanitizeFilename(meta.title, defaultExt)
 
                 _uiState.update {
                     it.copy(
                         isAnalyzing = false,
-                        metadata = meta,
+                        metadata = meta.copy(isAudioOnly = isAudioCandidate),
                         selectedFormat = defaultFmt,
                         customFilename = sanitizedName,
-                        errorMessage = null
+                        errorMessage = null,
+                        selectedImageIndices = initialSelectedIndices,
+                        previewImageIndex = 0,
+                        formatCategoryTab = targetTab
                     )
                 }
             } else {
@@ -228,6 +256,59 @@ class HomeViewModel(
         }
     }
 
+    fun setPreviewImageIndex(index: Int) {
+        _uiState.update { it.copy(previewImageIndex = index) }
+    }
+
+    fun toggleSelectImage(index: Int) {
+        _uiState.update { state ->
+            val current = state.selectedImageIndices.toMutableSet()
+            if (current.contains(index)) {
+                current.remove(index)
+            } else {
+                current.add(index)
+            }
+            state.copy(selectedImageIndices = current)
+        }
+    }
+
+    fun selectAllImages() {
+        val state = _uiState.value
+        val meta = state.metadata ?: return
+        val realCount = meta.imageOptions.count { it.formatId != "ALL_IMAGES" }
+        _uiState.update { it.copy(selectedImageIndices = (0 until realCount).toSet()) }
+    }
+
+    fun deselectAllImages() {
+        _uiState.update { it.copy(selectedImageIndices = emptySet()) }
+    }
+
+    fun setFormatCategoryTab(tab: Int) {
+        val state = _uiState.value
+        val meta = state.metadata ?: run {
+            _uiState.update { it.copy(formatCategoryTab = tab) }
+            return
+        }
+
+        val newFormat = when (tab) {
+            0 -> meta.videoOptions.firstOrNull { it.height == 720 } ?: meta.videoOptions.firstOrNull()
+            1 -> meta.audioOptions.firstOrNull { !it.isOriginalAudio && it.bitrateKbps == 128 } ?: meta.audioOptions.firstOrNull()
+            2 -> meta.audioOptions.firstOrNull { it.isOriginalAudio } ?: meta.videoOptions.firstOrNull()
+            else -> state.selectedFormat
+        } ?: state.selectedFormat
+
+        val ext = newFormat?.ext ?: "mp4"
+        val updatedName = storageRepository.sanitizeFilename(state.customFilename, ext)
+
+        _uiState.update {
+            it.copy(
+                formatCategoryTab = tab,
+                selectedFormat = newFormat,
+                customFilename = updatedName
+            )
+        }
+    }
+
     fun selectFormat(format: FormatOption) {
         val meta = _uiState.value.metadata ?: return
         val ext = when {
@@ -253,11 +334,23 @@ class HomeViewModel(
         val format = state.selectedFormat ?: return
         val filename = state.customFilename.ifEmpty { meta.title }
 
+        val selectedUrls = if (meta.isImageOnly && format.isImage) {
+            val realImages = meta.imageOptions.filter { it.formatId != "ALL_IMAGES" }
+            if (state.selectedImageIndices.isNotEmpty() && state.selectedImageIndices.size < realImages.size) {
+                state.selectedImageIndices.mapNotNull { idx -> realImages.getOrNull(idx)?.formatId }
+            } else {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+
         val result = downloadCoordinator.startDownload(
             url = meta.url,
             metadata = meta,
             selectedFormat = format,
-            customFilename = filename
+            customFilename = filename,
+            selectedImageUrls = selectedUrls
         )
 
         if (result.isSuccess) {

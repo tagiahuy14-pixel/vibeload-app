@@ -16,7 +16,8 @@ data class DownloadTask(
     val retryCount: Int = 0,
     val currentItemIndex: Int = 0,
     val totalItemCount: Int = 0,
-    val statusMessage: String? = null
+    val statusMessage: String? = null,
+    val selectedImageUrls: List<String> = emptyList()
 ) {
     fun getFormattedSpeed(): String {
         if (speedBytesPerSec <= 0f) return "0 KB/s"

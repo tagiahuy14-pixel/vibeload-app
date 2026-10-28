@@ -11,6 +11,7 @@ import sys
 import json
 import hashlib
 import re
+import time
 import subprocess
 import urllib.request
 import urllib.error
@@ -249,24 +250,58 @@ def main():
     clean_upload_url = upload_url_template.split("{")[0] + "?name=app-release.apk"
     print(f"\n[UPLOAD] Dang tai len app-release.apk ({apk_size_mb:.1f} MB)... Vui long doi...")
 
-    with open(APK_PATH, "rb") as f:
-        apk_bytes = f.read()
-
-    upload_headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/vnd.android.package-archive",
-        "Content-Length": str(len(apk_bytes))
-    }
-
     upload_res = None
     upload_status = None
+
+    curl_available = False
+    try:
+        subprocess.run(["curl.exe", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        curl_available = True
+    except Exception:
+        curl_available = False
+
     for attempt in range(1, 4):
         if attempt > 1:
             print(f"[RETRY] Thu tai len lai lan {attempt}/3...")
             time.sleep(3)
-        upload_res, upload_status = api_request(clean_upload_url, method="POST", data=apk_bytes, headers=upload_headers)
-        if upload_status in (200, 201):
-            break
+
+        if curl_available:
+            cmd = [
+                "curl.exe",
+                "-s", "-S",
+                "-X", "POST",
+                "-H", f"Authorization: Bearer {token}",
+                "-H", "Content-Type: application/vnd.android.package-archive",
+                "--data-binary", f"@{APK_PATH}",
+                clean_upload_url
+            ]
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            if res.returncode == 0:
+                try:
+                    upload_res = json.loads(res.stdout)
+                    if "id" in upload_res or "browser_download_url" in upload_res:
+                        upload_status = 201
+                        break
+                    elif "errors" in upload_res:
+                        upload_status = 422
+                except Exception:
+                    upload_status = 200
+                    break
+            else:
+                upload_res = {"error": res.stderr}
+                upload_status = 500
+        else:
+            with open(APK_PATH, "rb") as f:
+                apk_bytes = f.read()
+            upload_headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/vnd.android.package-archive",
+                "Content-Length": str(len(apk_bytes))
+            }
+            upload_res, upload_status = api_request(clean_upload_url, method="POST", data=apk_bytes, headers=upload_headers)
+            if upload_status in (200, 201):
+                break
+
         print(f"[WARN] Lan {attempt} that bai (HTTP {upload_status}): {upload_res.get('error') if isinstance(upload_res, dict) else upload_res}")
 
     if upload_status in (200, 201):

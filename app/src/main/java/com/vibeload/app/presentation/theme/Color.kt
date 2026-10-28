@@ -14,6 +14,7 @@ val DarkBorder = Color(0xFF26324B)
 val LightBackground = Color(0xFFF8FAFC)
 val LightSurface = Color(0xFFFFFFFF)
 val LightSurfaceVariant = Color(0xFFF1F5F9)
+val LightBorder = Color(0xFFE2E8F0)
 
 val AccentCyan = Color(0xFF38BDF8)
 val AccentPurple = Color(0xFF7C3AED)

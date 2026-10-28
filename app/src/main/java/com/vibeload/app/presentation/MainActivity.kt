@@ -255,11 +255,11 @@ class MainActivity : ComponentActivity() {
                             dismissButton = {
                                 if (!info.isMandatory && !prompt.isDownloading) {
                                     TextButton(onClick = { container.appUpdateManager.postponeUpdate() }) {
-                                        Text("Để sau", color = Color(0xFF94A3B8))
+                                        Text("Để sau", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             },
-                            containerColor = Color(0xFF131926)
+                            containerColor = MaterialTheme.colorScheme.surface
                         )
                     }
                 }
