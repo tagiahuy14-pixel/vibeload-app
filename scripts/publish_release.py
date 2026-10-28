@@ -201,14 +201,14 @@ def main():
 ### SHA-256 Checksum:
 `{sha256}`
 
-### Tính năng & Thay đổi mới:
-- **Hỗ trợ giao diện động Sáng / Tối / Theo hệ thống**: Toàn bộ trang chủ và ứng dụng chuyển đổi màu chuẩn xác, không còn bị kẹt giao diện tối.
-- **Xem trước toàn bộ ảnh trong Album**: Khung preview hỗ trợ lật xem từng ảnh với nút mũi tên Trái/Phải và huy hiệu đếm ảnh (`X / Y`).
-- **Chọn từng ảnh để tải (Multi-select Checkboxes)**: Thanh cuộn ngang hiển thị ảnh thu nhỏ kèm Checkbox để tick chọn các ảnh cần tải (ví dụ 1, 3, 5, 7), hỗ trợ nút *"Chọn tất cả"* và *"Bỏ chọn"*.
-- **Tải nhạc nền bài đăng (MP3)**: Hỗ trợ tùy chọn tải riêng tệp âm thanh MP3 đính kèm của album ảnh TikTok.
-- **Sửa triệt để lỗi tải MP3 trên TikTok**: Khắc phục lỗi định dạng âm thanh `bestaudio`, ưu tiên stream gốc và chuyển đổi MP3 chất lượng cao qua FFmpeg.
-- **Tự động nhận diện Video hay Âm thanh (MP3)**: Dán link nhạc hoặc âm thanh tự động chuyển sang tab *"Âm thanh (MP3)"* và chọn sẵn bitrate 128 kbps.
-- **Cập nhật OTA mượt mà**: Có sẵn quyền cài đặt và tự động kiểm tra phiên bản mới.
+### Tính năng & Sửa lỗi nổi bật:
+- 🚀 **Sửa triệt để lỗi tải liên kết ngắn TikTok (`vt.tiktok.com` & `vm.tiktok.com`)**: Ngăn chặn tình trạng TikTok chuyển hướng liên kết về trang chủ (`/?_r=1`) gây ra thông báo lỗi *"Không thể tải album ảnh TikTok này"*.
+- 🛠️ **Sửa lỗi crash engine TikWM**: Khắc phục lỗi tham chiếu biến âm thanh trong engine dự phòng, cho phép phân tích và trích xuất hoàn hảo mọi video, album ảnh và âm thanh TikTok.
+- 📸 **Bóc tách album ảnh TikTok thông minh**: Mở rộng khả năng nhận diện đa cấu trúc (`webapp.photo-detail`, `itemInfo`, `SIGI_STATE`), thu thập trọn bộ ảnh gốc chất lượng cao và nhạc nền đính kèm.
+- 🎨 **Hỗ trợ giao diện động Sáng / Tối / Theo hệ thống**: Toàn bộ trang chủ và ứng dụng chuyển đổi màu chuẩn xác, không còn bị kẹt giao diện tối.
+- 🖼️ **Xem trước và Chọn từng ảnh để tải (Multi-select Checkboxes)**: Khung preview lật ảnh mượt mà, thanh cuộn ngang hỗ trợ tick chọn ảnh cụ thể (ví dụ 1, 3, 5, 7) kèm nút *"Chọn tất cả"*.
+- 🎵 **Tải nhạc nền bài đăng (MP3)**: Tự động chuyển tab MP3 khi nhận diện liên kết âm thanh và hỗ trợ tải nhạc nền trực tiếp từ album TikTok.
+- 📲 **Cập nhật OTA mượt mà**: Tự động thông báo và nâng cấp nhanh chóng ngay trong ứng dụng.
 """
 
     if status_code == 200 and isinstance(release_data, dict) and "id" in release_data:

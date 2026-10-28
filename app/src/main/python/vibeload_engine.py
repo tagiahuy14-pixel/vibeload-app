@@ -109,6 +109,12 @@ def resolve_redirect_if_needed(url):
             with urllib.request.urlopen(req, timeout=10) as resp:
                 resolved = resp.geturl()
                 if resolved:
+                    # Guard for TikTok: if it redirected to the home page or root path,
+                    # DO NOT use it! Keep the original short URL so TikWM/extractors can parse it.
+                    if "vt.tiktok.com" in url_lower or "vm.tiktok.com" in url_lower:
+                        parsed = urllib.parse.urlparse(resolved)
+                        if parsed.path in ("", "/") or "login" in resolved.lower():
+                            return url
                     return resolved
         except Exception:
             pass
@@ -130,9 +136,9 @@ def format_error_message(err_str, url=""):
     if "instagram:story" in err_lower or "cookies-from-browser" in err_lower or ("instagram" in url_lower and ("unreachable" in err_lower or "cookie" in err_lower or "login" in err_lower)):
         return "Tin (Story) hoặc bài viết Instagram này yêu cầu đăng nhập tài khoản để xem. Vui lòng thử tải các bài viết hoặc Reels công khai."
 
-    # 3. TikTok Photo / Slideshow Album
+    # 3. TikTok Photo / Slideshow Album / Content
     if "/photo/" in url_lower or ("tiktok" in url_lower and ("photo" in err_lower or "unsupported url" in err_lower)):
-        return "Không thể tải album ảnh TikTok này. Bài viết có thể ở chế độ riêng tư, đã bị xóa hoặc TikTok đang yêu cầu xác minh bảo mật."
+        return "Không thể tải nội dung TikTok này. Bài viết có thể ở chế độ riêng tư, đã bị xóa hoặc TikTok đang yêu cầu xác minh bảo mật."
 
     # 4. Facebook Private / Closed Group / Login Wall
     if "cannot parse data" in err_lower or ("facebook" in url_lower and ("login" in err_lower or "unsupported url" in err_lower or "report this issue" in err_lower)):
@@ -173,41 +179,87 @@ def format_error_message(err_str, url=""):
 
 def extract_tiktok_via_tikwm(url):
     """
-    Secondary fallback for TikTok photo carousels/slides via TikWM API.
+    Secondary fallback for TikTok photo carousels/slides, videos, and music via TikWM API.
     """
-    try:
-        data = urllib.parse.urlencode({"url": url, "hd": 1}).encode("utf-8")
-        req = urllib.request.Request(
-            "https://www.tikwm.com/api/",
-            data=data,
-            headers={
-                "User-Agent": DEFAULT_HEADERS["User-Agent"],
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-        )
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            res = json.loads(resp.read().decode("utf-8"))
-            if res.get("code") == 0 and "data" in res:
-                d = res["data"]
-                images = d.get("images", [])
-                if not images:
-                    # Fallback for TikTok Video or TikTok Music when yt-dlp is restricted
-                    video_url = d.get("hdplay") or d.get("play")
-                    cover = d.get("cover") or ""
-                    duration = d.get("duration") or 0
-                    video_options = []
-                    if video_url:
-                        video_options.append({
-                            "format_id": video_url,
-                            "resolution": "HD (Không logo)",
-                            "height": 1080,
-                            "width": 1920,
-                            "ext": "mp4",
+    endpoints = ["https://www.tikwm.com/api/", "https://tikwm.com/api/"]
+    for ep in endpoints:
+        try:
+            data = urllib.parse.urlencode({"url": url, "hd": 1}).encode("utf-8")
+            req = urllib.request.Request(
+                ep,
+                data=data,
+                headers={
+                    "User-Agent": DEFAULT_HEADERS["User-Agent"],
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "Accept": "application/json, text/javascript, */*; q=0.01"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                res = json.loads(resp.read().decode("utf-8"))
+                if res.get("code") == 0 and "data" in res:
+                    d = res["data"]
+                    images = d.get("images", [])
+                    music_url = d.get("music") or d.get("play")
+
+                    if not images:
+                        # Fallback for TikTok Video or TikTok Music when yt-dlp is restricted
+                        video_url = d.get("hdplay") or d.get("play")
+                        cover = d.get("cover") or ""
+                        duration = d.get("duration") or 0
+                        video_options = []
+                        if video_url:
+                            video_options.append({
+                                "format_id": video_url,
+                                "resolution": "HD (Không logo)",
+                                "height": 1080,
+                                "width": 1920,
+                                "ext": "mp4",
+                                "filesize": d.get("hd_size") or d.get("size") or 0,
+                                "vcodec": "h264",
+                                "acodec": "aac",
+                                "needs_merge": False
+                            })
+                        audio_options = []
+                        if music_url:
+                            audio_options.append({
+                                "format_id": music_url,
+                                "ext": "mp3",
+                                "abr": 128,
+                                "filesize": 0,
+                                "acodec": "mp3"
+                            })
+                        is_audio_only = "/music/" in url.lower() or (len(video_options) == 0 and len(audio_options) > 0)
+                        return {
+                            "success": True,
+                            "id": str(d.get("id") or ""),
+                            "url": url,
+                            "title": d.get("title") or "TikTok",
+                            "thumbnail": cover,
+                            "uploader": d.get("author", {}).get("nickname") or d.get("author", {}).get("unique_id") or "TikTok",
+                            "duration": duration,
+                            "platform": "tiktok",
+                            "video_options": video_options if not is_audio_only else [],
+                            "audio_options": audio_options,
+                            "image_options": [],
+                            "is_image_only": False,
+                            "is_audio_only": is_audio_only
+                        }
+
+                    title = d.get("title") or "TikTok Ảnh"
+                    author = d.get("author", {}).get("nickname") or d.get("author", {}).get("unique_id") or "TikTok"
+
+                    image_options = []
+                    for idx, img_url in enumerate(images):
+                        image_options.append({
+                            "format_id": img_url,
+                            "label": f"Ảnh {idx + 1}/{len(images)}",
+                            "ext": "jpg",
+                            "resolution": f"Ảnh {idx + 1}",
                             "filesize": 0,
-                            "vcodec": "h264",
-                            "acodec": "aac",
-                            "needs_merge": False
+                            "is_image": True,
+                            "mime_type": "image/jpeg"
                         })
+
                     audio_options = []
                     if music_url:
                         audio_options.append({
@@ -217,66 +269,24 @@ def extract_tiktok_via_tikwm(url):
                             "filesize": 0,
                             "acodec": "mp3"
                         })
-                    is_audio_only = "/music/" in url.lower() or (len(video_options) == 0 and len(audio_options) > 0)
+
+                    item_id = str(d.get("id") or "")
                     return {
                         "success": True,
-                        "id": str(d.get("id") or ""),
+                        "id": item_id,
                         "url": url,
-                        "title": d.get("title") or "TikTok",
-                        "thumbnail": cover,
-                        "uploader": d.get("author", {}).get("nickname") or d.get("author", {}).get("unique_id") or "TikTok",
-                        "duration": duration,
+                        "title": title,
+                        "thumbnail": image_options[0]["format_id"] if image_options else "",
+                        "uploader": author,
+                        "duration": 0,
                         "platform": "tiktok",
-                        "video_options": video_options if not is_audio_only else [],
+                        "video_options": [],
                         "audio_options": audio_options,
-                        "image_options": [],
-                        "is_image_only": False,
-                        "is_audio_only": is_audio_only
+                        "image_options": image_options,
+                        "is_image_only": True
                     }
-
-                title = d.get("title") or "TikTok Ảnh"
-                author = d.get("author", {}).get("nickname") or d.get("author", {}).get("unique_id") or "TikTok"
-                music_url = d.get("music") or d.get("play")
-
-                image_options = []
-                for idx, img_url in enumerate(images):
-                    image_options.append({
-                        "format_id": img_url,
-                        "label": f"Ảnh {idx + 1}/{len(images)}",
-                        "ext": "jpg",
-                        "resolution": f"Ảnh {idx + 1}",
-                        "filesize": 0,
-                        "is_image": True,
-                        "mime_type": "image/jpeg"
-                    })
-
-                audio_options = []
-                if music_url:
-                    audio_options.append({
-                        "format_id": music_url,
-                        "ext": "mp3",
-                        "abr": 128,
-                        "filesize": 0,
-                        "acodec": "mp3"
-                    })
-
-                item_id = str(d.get("id") or "")
-                return {
-                    "success": True,
-                    "id": item_id,
-                    "url": url,
-                    "title": title,
-                    "thumbnail": image_options[0]["format_id"],
-                    "uploader": author,
-                    "duration": 0,
-                    "platform": "tiktok",
-                    "video_options": [],
-                    "audio_options": audio_options,
-                    "image_options": image_options,
-                    "is_image_only": True
-                }
-    except Exception:
-        pass
+        except Exception:
+            pass
     return None
 
 def extract_tiktok_photos_direct(url):
@@ -298,8 +308,14 @@ def extract_tiktok_photos_direct(url):
             try:
                 data = json.loads(m.group(1))
                 scope = data.get('__DEFAULT_SCOPE__', {})
-                detail = scope.get('webapp.video-detail', {})
-                item = detail.get('itemInfo', {}).get('itemStruct', {})
+                for k, v in scope.items():
+                    if isinstance(v, dict):
+                        cand = v.get('itemInfo', {}).get('itemStruct') or v.get('itemStruct') or v.get('photoInfo') or v
+                        if isinstance(cand, dict) and ('imagePost' in cand or 'images' in cand):
+                            item = cand
+                            break
+                if not item:
+                    item = scope.get('webapp.video-detail', {}).get('itemInfo', {}).get('itemStruct', {})
             except Exception:
                 pass
 
@@ -315,8 +331,8 @@ def extract_tiktok_photos_direct(url):
                 except Exception:
                     pass
 
-        image_post = item.get('imagePost', {})
-        images = image_post.get('images', [])
+        image_post = item.get('imagePost', {}) if isinstance(item, dict) else {}
+        images = image_post.get('images', []) or (item.get('images', []) if isinstance(item, dict) else [])
 
         if not images:
             return None
@@ -327,10 +343,13 @@ def extract_tiktok_photos_direct(url):
 
         image_options = []
         for idx, img in enumerate(images):
-            url_list = img.get('imageURL', {}).get('urlList', [])
-            if not url_list:
-                continue
-            best_img_url = url_list[0]
+            if isinstance(img, str):
+                best_img_url = img
+            else:
+                url_list = img.get('imageURL', {}).get('urlList', []) or img.get('urlList', [])
+                if not url_list:
+                    continue
+                best_img_url = url_list[0]
             image_options.append({
                 "format_id": best_img_url,
                 "label": f"Ảnh {idx + 1}/{len(images)}",
@@ -342,7 +361,7 @@ def extract_tiktok_photos_direct(url):
             })
 
         audio_options = []
-        music = item.get('music', {})
+        music = item.get('music', {}) if isinstance(item, dict) else {}
         play_url = music.get('playUrl')
         if play_url:
             audio_options.append({
@@ -374,9 +393,20 @@ def extract_tiktok_photos_direct(url):
 
 def extract_tiktok_photos(url):
     """
-    Extract photo slideshow images and background music from TikTok photo posts.
-    Tries direct on-device HTML parsing first, then TikWM fallback.
+    Extract photo slideshow images or video/music from TikTok posts.
+    Tries TikWM fallback first for shortlinks (vt.tiktok.com/vm.tiktok.com),
+    and direct HTML parsing first for full URLs.
     """
+    url_lower = url.lower()
+    if "vt.tiktok.com" in url_lower or "vm.tiktok.com" in url_lower:
+        tikwm_res = extract_tiktok_via_tikwm(url)
+        if tikwm_res:
+            return tikwm_res
+        direct_res = extract_tiktok_photos_direct(url)
+        if direct_res:
+            return direct_res
+        return None
+
     direct_res = extract_tiktok_photos_direct(url)
     if direct_res:
         return direct_res
@@ -466,8 +496,10 @@ def analyze_url(url):
     clean_url = resolve_redirect_if_needed(clean_url)
 
     # For TikTok photo posts, shortlinks, or music links, attempt specialized extractor first
-    if "/photo/" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "vm.tiktok.com" in clean_url.lower() or "/music/" in clean_url.lower():
+    if "/photo/" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "vm.tiktok.com" in clean_url.lower() or "/music/" in clean_url.lower() or "vt.tiktok.com" in url.lower() or "vm.tiktok.com" in url.lower():
         tiktok_photo_res = extract_tiktok_photos(clean_url)
+        if not tiktok_photo_res and url != clean_url:
+            tiktok_photo_res = extract_tiktok_photos(url)
         if tiktok_photo_res:
             return json.dumps(tiktok_photo_res)
 
@@ -642,22 +674,30 @@ def analyze_url(url):
             return json.dumps(result)
 
     except yt_dlp.utils.DownloadError as e:
-        if "tiktok" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower():
+        if "tiktok" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "tiktok" in url.lower() or "vt.tiktok.com" in url.lower():
             tt_photos = extract_tiktok_photos(clean_url)
+            if not tt_photos and url != clean_url:
+                tt_photos = extract_tiktok_photos(url)
             if tt_photos:
                 return json.dumps(tt_photos)
-        if "facebook" in clean_url.lower() or "fb.watch" in clean_url.lower() or "/share/" in clean_url.lower():
+        if "facebook" in clean_url.lower() or "fb.watch" in clean_url.lower() or "/share/" in clean_url.lower() or "facebook" in url.lower():
             fb_media = extract_opengraph_media(clean_url)
+            if not fb_media and url != clean_url:
+                fb_media = extract_opengraph_media(url)
             if fb_media:
                 return json.dumps(fb_media)
         return json.dumps({"success": False, "error": format_error_message(str(e), url)})
     except Exception as e:
-        if "tiktok" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower():
+        if "tiktok" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "tiktok" in url.lower() or "vt.tiktok.com" in url.lower():
             tt_photos = extract_tiktok_photos(clean_url)
+            if not tt_photos and url != clean_url:
+                tt_photos = extract_tiktok_photos(url)
             if tt_photos:
                 return json.dumps(tt_photos)
-        if "facebook" in clean_url.lower() or "fb.watch" in clean_url.lower() or "/share/" in clean_url.lower():
+        if "facebook" in clean_url.lower() or "fb.watch" in clean_url.lower() or "/share/" in clean_url.lower() or "facebook" in url.lower():
             fb_media = extract_opengraph_media(clean_url)
+            if not fb_media and url != clean_url:
+                fb_media = extract_opengraph_media(url)
             if fb_media:
                 return json.dumps(fb_media)
         return json.dumps({"success": False, "error": format_error_message(str(e), url)})
