@@ -202,17 +202,20 @@ def main():
 `{sha256}`
 
 ### Tính năng & Sửa lỗi nổi bật:
-- 🎨 **Thanh điều hướng dưới đổi chuẩn theo giao diện (Hệ thống / Sáng / Tối)**: Khắc phục triệt để lỗi Bottom Bar bị kẹt màu đen/tối trong chế độ sáng; đồng bộ màu thanh hệ thống Android (Navigation Bar & Status Bar) chuẩn sắc nét theo từng chế độ.
-- 🌟 **Thiết kế giao diện hiện đại & trực quan**:
-  - Sửa lỗi hiển thị chữ *"Tệp đã tải về"* bị tàng hình màu trắng trên nền sáng.
-  - Nâng cấp trạng thái trống (Empty State) với icon thư mục hiện đại và chỉ dẫn thao tác rõ ràng.
-  - Thẻ phương tiện (Media Card) với hệ thống nút thao tác dạng Tonal Pill (Phát/Xem ảnh, Mở thư mục, Xóa) tương thích hoàn hảo mọi chế độ màu.
-  - Khung thông báo lỗi (Error Banner) thiết kế chuẩn Material 3 kèm nút tắt (X) đóng nhanh tiện lợi.
-- 🚀 **Tối ưu hóa bóc tách liên kết TikTok (`vt.tiktok.com` & `vm.tiktok.com`)**:
-  - Tự động trích xuất URL chuẩn xác ngay cả khi dán kèm văn bản giới thiệu từ TikTok.
-  - Cảnh báo thông minh nếu liên kết bị thiếu ký tự hoặc cắt cụt.
-  - Tối ưu hóa gửi mã rút gọn nguyên bản tới hệ thống phân tích với Mobile User-Agent để lấy trọn vẹn album ảnh, video không logo và nhạc nền.
-- 🖼️ **Xem trước và chọn từng ảnh tải về (Multi-select Checkboxes)**: Duyệt album ảnh mượt mà, tick chọn nhanh các ảnh cần tải (ví dụ 1, 3, 5, 7).
+- 🚀 **Cập nhật Biểu tượng Logo mới (App Icon)**:
+  - Thiết kế logo nhận diện thương hiệu hoàn toàn mới: Gradient chuyển sắc xanh dương - tím điện tử hiện đại, điểm nhấn họa tiết ruy-băng 3D cách điệu Play/Download.
+  - Hỗ trợ đầy đủ Adaptive Icons (Biểu tượng thích ứng) và toàn bộ bộ phân giải Mipmap (MDPI đến XXXHDPI).
+  - Tương thích và bo viền chuẩn xác trên mọi giao diện launcher: Xiaomi HyperOS (Xiaomi 15 Ultra, 17 Ultra, 18 Pro/Max), Samsung OneUI (S25 Ultra, S26, S26 Ultra), Oppo ColorOS, Vivo OriginOS và Pixel Launcher.
+- 📱 **Sửa lỗi hiển thị & Tối ưu bố cục thích ứng đa màn hình**:
+  - Khắc phục triệt để lỗi viên thuốc lọc *"Ảnh"* bị co ép thành dải dọc kéo dài trên màn hình tiêu chuẩn hoặc khi bật tỷ lệ phóng to chữ/hiển thị của máy.
+  - Bổ sung cuộn ngang mượt mà cho hàng bộ lọc thư viện (*Tất cả, Video, Âm thanh, Ảnh*), đảm bảo không bao giờ bị co rúm, méo chữ trên bất kỳ kích cỡ điện thoại nào.
+  - Tối ưu căn chỉnh hàng phím tắt nền tảng (YouTube, TikTok, Facebook, Instagram, X) đều đặn, chống tràn viền.
+- 🎨 **Đồng bộ hoàn hảo giao diện Sáng / Tối**:
+  - Thanh Bottom Bar và System Bars (thanh trạng thái & thanh điều hướng cử chỉ) chuyển màu chính xác theo theme hệ thống hoặc chế độ người dùng chọn.
+  - Sửa dứt điểm lỗi nhãn *"Tệp đã tải về"* bị tàng hình trong chế độ sáng.
+- 🖼️ **Tải Album ảnh TikTok & Chọn lọc ảnh tiện lợi**:
+  - Tự động nhận diện bài viết album ảnh TikTok (`vt.tiktok.com`, `tiktok.com/@user/photo/...`).
+  - Hỗ trợ xem lướt album và đánh dấu chọn từng ảnh (1, 3, 5, 7...) để tải nhanh về máy kèm nhạc nền gốc.
 - 📲 **Cập nhật OTA mượt mà**: Tự động thông báo và cập nhật tức thì.
 """
 
