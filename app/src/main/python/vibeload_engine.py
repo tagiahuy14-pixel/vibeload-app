@@ -2,12 +2,14 @@ import base64
 import http.cookiejar
 import json
 import os
+import random
 import re
 import shutil
 import subprocess
 import sys
 import time
 import urllib.parse
+import uuid
 import yt_dlp
 
 DEFAULT_HEADERS = {
@@ -423,6 +425,136 @@ def extract_tiktok_photos(url):
         return direct_res
     return extract_tiktok_via_tikwm(url)
 
+def extract_tiktok_music_track(url, clean_url=""):
+    """
+    Directly extract the original audio track (Âm thanh gốc) from TikTok Sound/Music links.
+    Supports vt.tiktok.com shortlinks and tiktok.com/music/... pages.
+    """
+    test_urls = [u for u in [clean_url, url] if u]
+    is_music = False
+    music_final_url = ""
+    music_id = ""
+
+    for u in test_urls:
+        u_lower = u.lower()
+        if "/music/" in u_lower or "share_music_id" in u_lower:
+            is_music = True
+            music_final_url = u
+            break
+        if "vt.tiktok.com" in u_lower or "vm.tiktok.com" in u_lower:
+            try:
+                req = urllib.request.Request(u, headers=DEFAULT_HEADERS)
+                with urllib.request.urlopen(req, timeout=6) as resp:
+                    redir_url = resp.geturl()
+                    if "/music/" in redir_url.lower() or "share_music_id" in redir_url.lower():
+                        is_music = True
+                        music_final_url = redir_url
+                        break
+            except Exception:
+                pass
+
+    if not is_music:
+        return None
+
+    # Extract music ID
+    m = re.search(r'/music/(?:[^/?#]+-)?(\d+)', music_final_url) or re.search(r'share_music_id=(\d+)', music_final_url)
+    if not m:
+        return None
+
+    music_id = m.group(1)
+
+    hosts = [
+        'https://api16-normal-c-useast1a.tiktokv.com',
+        'https://api22-normal-c-alisg.tiktokv.com',
+        'https://api.tiktokv.com'
+    ]
+
+    for h in hosts:
+        try:
+            dev_id = str(random.randint(7000000000000000000, 7999999999999999999))
+            iid = str(random.randint(7000000000000000000, 7999999999999999999))
+            query = {
+                'music_id': music_id,
+                'cursor': '0',
+                'count': '5',
+                'type': '5',
+                'device_platform': 'android',
+                'os': 'android',
+                'ssmix': 'a',
+                '_rticket': str(int(time.time() * 1000)),
+                'cdid': str(uuid.uuid4()),
+                'channel': 'googleplay',
+                'aid': '1233',
+                'app_name': 'musical_ly',
+                'version_code': '300904',
+                'version_name': '30.9.4',
+                'manifest_version_code': '2023009040',
+                'update_version_code': '2023009040',
+                'resolution': '1080*2400',
+                'dpi': '420',
+                'device_type': 'Pixel 7',
+                'device_brand': 'Google',
+                'language': 'vi',
+                'os_api': '29',
+                'os_version': '13',
+                'current_region': 'VN',
+                'sys_region': 'VN',
+                'app_language': 'vi',
+                'locale': 'vi',
+                'ts': str(int(time.time())),
+                'iid': iid,
+                'device_id': dev_id,
+                'openudid': ''.join(random.choices('0123456789abcdef', k=16)),
+            }
+            api_url = f"{h}/aweme/v1/music/aweme/?{urllib.parse.urlencode(query)}"
+            req = urllib.request.Request(api_url, headers={
+                'User-Agent': 'com.zhiliaoapp.musically/2023009040 (Linux; U; Android 13; en_US; Pixel 7; Build/TQ3A.230901.001; Cronet/TTNetVersion:b4d74d15 2024-03-05 QuicVersion:0144d358 2024-01-24)',
+                'Accept': 'application/json'
+            })
+            with urllib.request.urlopen(req, timeout=8) as r:
+                body = r.read().decode('utf-8')
+                if len(body) > 1000:
+                    js = json.loads(body)
+                    awemes = js.get('aweme_list', [])
+                    if awemes:
+                        music = awemes[0].get('music', {})
+                        play_url_list = music.get('play_url', {}).get('url_list', [])
+                        audio_stream_url = play_url_list[0] if play_url_list else ""
+
+                        cover_list = music.get('cover_large', {}).get('url_list', []) or music.get('cover_medium', {}).get('url_list', []) or music.get('cover_hd', {}).get('url_list', [])
+                        cover_url = cover_list[0] if cover_list else ""
+
+                        title = music.get('title') or "Âm thanh gốc"
+                        author = music.get('author') or "TikTok"
+                        duration = music.get('duration') or 0
+
+                        if audio_stream_url:
+                            return {
+                                "success": True,
+                                "id": str(music.get('id') or music_id),
+                                "url": music_final_url,
+                                "title": f"Âm thanh: {title}",
+                                "thumbnail": cover_url,
+                                "uploader": author,
+                                "duration": duration,
+                                "platform": "tiktok",
+                                "video_options": [],
+                                "audio_options": [{
+                                    "format_id": audio_stream_url,
+                                    "ext": "mp3",
+                                    "abr": 128,
+                                    "filesize": 0,
+                                    "acodec": "mp3"
+                                }],
+                                "image_options": [],
+                                "is_image_only": False,
+                                "is_audio_only": True
+                            }
+        except Exception:
+            pass
+
+    return None
+
 def check_tiktok_music_link(url, clean_url=""):
     """
     Detect if the URL or shortlink points to a TikTok Music/Sound catalog (/music/).
@@ -562,13 +694,19 @@ def analyze_url(url):
 
     # For TikTok photo posts, shortlinks, or music links, attempt specialized extractor first
     if "/photo/" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "vm.tiktok.com" in clean_url.lower() or "/music/" in clean_url.lower() or "vt.tiktok.com" in url.lower() or "vm.tiktok.com" in url.lower():
+        # 1. First, check if this is a TikTok Sound / Music link (tải Âm thanh gốc trực tiếp)
+        music_res = extract_tiktok_music_track(url, clean_url)
+        if music_res:
+            return json.dumps(music_res)
+
+        # 2. Check if this is a TikTok photo album or video
         tiktok_photo_res = extract_tiktok_photos(clean_url)
         if not tiktok_photo_res and url != clean_url:
             tiktok_photo_res = extract_tiktok_photos(url)
         if tiktok_photo_res:
             return json.dumps(tiktok_photo_res)
 
-        # Check if this link points to a TikTok Sound/Music catalog
+        # 3. Check if this link points to a TikTok Sound/Music catalog but stream extraction failed
         music_check = check_tiktok_music_link(url, clean_url)
         if music_check:
             return json.dumps(music_check)

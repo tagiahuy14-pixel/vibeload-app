@@ -1,8 +1,8 @@
 {
-  "versionCode": 10,
-  "versionName": "1.0.9",
-  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.9/app-release.apk",
-  "sha256": "B7D297AAE339A5D509DDEB2E032E3F3349E08768B1FA63FB91AF7D63ACCA7286",
+  "versionCode": 11,
+  "versionName": "1.0.10",
+  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.10/app-release.apk",
+  "sha256": "C953972F24B5D0066A1EA25BB431EC3FD366900F7D8BD771C03DC7B010AC389E",
   "mandatory": false,
-  "releaseNotes": "Cập nhật biểu tượng Logo mới. Sửa lỗi hiển thị nút lọc 'Ảnh' bị co dãn dọc. Tối ưu giao diện responsive trên mọi kích thước màn hình điện thoại (Xiaomi 15/17 Ultra, Samsung S25/S26 Ultra, Oppo, Vivo)."
+  "releaseNotes": "Tối ưu độ tương phản và sửa lỗi hiển thị chữ trong Hộp thoại Cập nhật (hỗ trợ hoàn hảo Chế độ sáng/tối). Nhận diện thông minh và hướng dẫn trích xuất âm thanh MP3 từ liên kết TikTok Sound/Music."
 }

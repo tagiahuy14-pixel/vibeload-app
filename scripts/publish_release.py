@@ -202,13 +202,13 @@ def main():
 `{sha256}`
 
 ### Tính năng & Sửa lỗi nổi bật:
+- 🎵 **Hỗ trợ Tải trực tiếp Âm thanh Gốc TikTok (TikTok Original Sound / Music)**:
+  - Cho phép dán trực tiếp liên kết Trang Âm thanh / Đĩa nhạc (`https://vt.tiktok.com/...` hoặc `https://www.tiktok.com/music/...`) để tải ngay bản nhạc nền gốc nguyên bản dưới định dạng file MP3 chất lượng cao.
+  - Tự động trích xuất đầy đủ ảnh đại diện/bìa đĩa nhạc, tên bài hát, tên nghệ sĩ sáng tác và thời lượng chính xác của bài nhạc.
+  - Phân biệt hoàn hảo giữa *Tải âm thanh gốc của bài hát* và *Trích xuất âm thanh từ video*, đáp ứng trọn vẹn nhu cầu lưu trữ nhạc TikTok chất lượng cao của người dùng.
 - 🎨 **Tối ưu độ tương phản & Sửa lỗi hiển thị Hộp thoại Cập nhật (OTA Update Dialog)**:
-  - Khắc phục triệt để lỗi màu chữ trắng/xám bạc bị chìm trên nền trắng khi máy ở Chế độ sáng (Light Theme).
-  - Chuyển đổi toàn bộ sang Material 3 Theme Tokens: Tiêu đề rõ ràng, phiên bản mới màu Primary nổi bật, hộp thông tin ghi chú bo cong hiện đại và dễ đọc trên cả 2 chế độ Sáng và Tối.
-- 🎵 **Nhận diện thông minh & Hướng dẫn tải âm thanh TikTok (Sound/Music)**:
-  - Tự động nhận diện liên kết Danh mục Âm thanh TikTok (`/music/` hoặc shortlink `vt.tiktok.com` dẫn tới trang đĩa nhạc).
-  - Tự động truy xuất Tên bài hát và Tác giả gốc qua OpenGraph/oEmbed (ví dụ: *"♬ music - KJ Rap Life"*).
-  - Hướng dẫn trực quan, chính xác cho người dùng cách sao chép liên kết video phát bài hát để trích xuất file MP3 chất lượng cao nhất mà không bị báo lỗi xác minh bảo mật.
+  - Khắc phục triệt để lỗi màu chữ trắng/xám bạc bị chìm trên nền trắng khi thiết bị ở Chế độ sáng (Light Theme).
+  - Chuyển đổi toàn bộ sang Material 3 Theme Tokens: Tiêu đề rõ nét, phiên bản mới màu Primary nổi bật, hộp thông tin ghi chú bo cong hiện đại và dễ đọc trên cả 2 chế độ Sáng và Tối.
 - ⚡ **Cơ chế cập nhật OTA đa tầng (Multi-tier CDN Fallback)**:
   - Chống chặn giới hạn HTTP 403 Rate Limit trên mạng di động 4G/5G với cơ chế dự phòng 3 lớp (GitHub API -> Web 302 Redirect -> jsDelivr CDN manifest).
 - 🚀 **Biểu tượng Logo mới & Giao diện thích ứng siêu mượt**:
@@ -320,7 +320,7 @@ def main():
                 "downloadUrl": f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/{tag_name}/app-release.apk",
                 "sha256": sha256,
                 "mandatory": False,
-                "releaseNotes": f"Tối ưu độ tương phản và sửa lỗi hiển thị chữ trong Hộp thoại Cập nhật (hỗ trợ hoàn hảo Chế độ sáng/tối). Nhận diện thông minh và hướng dẫn trích xuất âm thanh MP3 từ liên kết TikTok Sound/Music."
+                "releaseNotes": f"Hỗ trợ tải trực tiếp Âm thanh Gốc TikTok (Sound/Music) từ liên kết trang đĩa nhạc dưới dạng file MP3 chất lượng cao. Khắc phục triệt để lỗi độ tương phản và màu chữ trong Hộp thoại Cập nhật ở Chế độ sáng."
             }
             with open(version_json_path, "w", encoding="utf-8") as f:
                 json.dump(version_manifest, f, ensure_ascii=False, indent=2)
