@@ -83,13 +83,26 @@ class HomeViewModel(
     }
 
     fun analyzeUrl() {
-        val rawUrl = _uiState.value.urlInput.trim()
-        val url = normalizeUrl(rawUrl)
-        if (url != rawUrl) {
+        val rawInput = _uiState.value.urlInput.trim()
+        val extracted = extractUrlFromText(rawInput)
+        val url = if (extracted.isNotEmpty()) extracted else normalizeUrl(rawInput)
+        if (url != rawInput) {
             _uiState.update { it.copy(urlInput = url) }
         }
         if (!isValidUrl(url)) {
             _uiState.update { it.copy(errorMessage = "Vui lòng nhập đường dẫn URL hợp lệ (bắt đầu bằng http:// hoặc https://)") }
+            return
+        }
+
+        // Check TikTok shortlink completeness
+        val tiktokShortMatch = Regex("""(?:vt|vm)\.tiktok\.com/([A-Za-z0-9_-]+)""", RegexOption.IGNORE_CASE).find(url)
+        val shortCode = tiktokShortMatch?.groupValues?.getOrNull(1) ?: ""
+        if (shortCode.isNotEmpty() && shortCode.length < 7) {
+            _uiState.update {
+                it.copy(
+                    errorMessage = "Đường dẫn TikTok chưa đầy đủ (mã liên kết rút gọn thường có từ 9 đến 10 ký tự, ví dụ: https://vt.tiktok.com/ZSxxxxxxx/). Vui lòng sao chép lại toàn bộ liên kết từ TikTok."
+                )
+            }
             return
         }
 
@@ -385,6 +398,12 @@ class HomeViewModel(
         }
 
         fun extractUrlFromText(text: String): String {
+            val urlRegex = Regex("""https?://[^\s"'<>]+""")
+            val match = urlRegex.find(text)
+            if (match != null) {
+                val found = match.value.trim().trim('"', '\'')
+                if (isValidUrl(found)) return normalizeUrl(found)
+            }
             val parts = text.split("\\s+".toRegex())
             for (part in parts) {
                 val cleaned = part.trim().trim('"', '\'')

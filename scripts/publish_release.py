@@ -202,13 +202,18 @@ def main():
 `{sha256}`
 
 ### Tính năng & Sửa lỗi nổi bật:
-- 🚀 **Sửa triệt để lỗi tải liên kết ngắn TikTok (`vt.tiktok.com` & `vm.tiktok.com`)**: Ngăn chặn tình trạng TikTok chuyển hướng liên kết về trang chủ (`/?_r=1`) gây ra thông báo lỗi *"Không thể tải album ảnh TikTok này"*.
-- 🛠️ **Sửa lỗi crash engine TikWM**: Khắc phục lỗi tham chiếu biến âm thanh trong engine dự phòng, cho phép phân tích và trích xuất hoàn hảo mọi video, album ảnh và âm thanh TikTok.
-- 📸 **Bóc tách album ảnh TikTok thông minh**: Mở rộng khả năng nhận diện đa cấu trúc (`webapp.photo-detail`, `itemInfo`, `SIGI_STATE`), thu thập trọn bộ ảnh gốc chất lượng cao và nhạc nền đính kèm.
-- 🎨 **Hỗ trợ giao diện động Sáng / Tối / Theo hệ thống**: Toàn bộ trang chủ và ứng dụng chuyển đổi màu chuẩn xác, không còn bị kẹt giao diện tối.
-- 🖼️ **Xem trước và Chọn từng ảnh để tải (Multi-select Checkboxes)**: Khung preview lật ảnh mượt mà, thanh cuộn ngang hỗ trợ tick chọn ảnh cụ thể (ví dụ 1, 3, 5, 7) kèm nút *"Chọn tất cả"*.
-- 🎵 **Tải nhạc nền bài đăng (MP3)**: Tự động chuyển tab MP3 khi nhận diện liên kết âm thanh và hỗ trợ tải nhạc nền trực tiếp từ album TikTok.
-- 📲 **Cập nhật OTA mượt mà**: Tự động thông báo và nâng cấp nhanh chóng ngay trong ứng dụng.
+- 🎨 **Thanh điều hướng dưới đổi chuẩn theo giao diện (Hệ thống / Sáng / Tối)**: Khắc phục triệt để lỗi Bottom Bar bị kẹt màu đen/tối trong chế độ sáng; đồng bộ màu thanh hệ thống Android (Navigation Bar & Status Bar) chuẩn sắc nét theo từng chế độ.
+- 🌟 **Thiết kế giao diện hiện đại & trực quan**:
+  - Sửa lỗi hiển thị chữ *"Tệp đã tải về"* bị tàng hình màu trắng trên nền sáng.
+  - Nâng cấp trạng thái trống (Empty State) với icon thư mục hiện đại và chỉ dẫn thao tác rõ ràng.
+  - Thẻ phương tiện (Media Card) với hệ thống nút thao tác dạng Tonal Pill (Phát/Xem ảnh, Mở thư mục, Xóa) tương thích hoàn hảo mọi chế độ màu.
+  - Khung thông báo lỗi (Error Banner) thiết kế chuẩn Material 3 kèm nút tắt (X) đóng nhanh tiện lợi.
+- 🚀 **Tối ưu hóa bóc tách liên kết TikTok (`vt.tiktok.com` & `vm.tiktok.com`)**:
+  - Tự động trích xuất URL chuẩn xác ngay cả khi dán kèm văn bản giới thiệu từ TikTok.
+  - Cảnh báo thông minh nếu liên kết bị thiếu ký tự hoặc cắt cụt.
+  - Tối ưu hóa gửi mã rút gọn nguyên bản tới hệ thống phân tích với Mobile User-Agent để lấy trọn vẹn album ảnh, video không logo và nhạc nền.
+- 🖼️ **Xem trước và chọn từng ảnh tải về (Multi-select Checkboxes)**: Duyệt album ảnh mượt mà, tick chọn nhanh các ảnh cần tải (ví dụ 1, 3, 5, 7).
+- 📲 **Cập nhật OTA mượt mà**: Tự động thông báo và cập nhật tức thì.
 """
 
     if status_code == 200 and isinstance(release_data, dict) and "id" in release_data:

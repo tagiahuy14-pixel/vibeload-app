@@ -1,6 +1,7 @@
 package com.vibeload.app.presentation
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -19,10 +20,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
@@ -117,6 +120,30 @@ class MainActivity : ComponentActivity() {
                 "LIGHT" -> false
                 "DARK" -> true
                 else -> systemDark
+            }
+
+            val view = LocalView.current
+            if (!view.isInEditMode) {
+                SideEffect {
+                    val window = (view.context as? Activity)?.window
+                    if (window != null) {
+                        val insetsController = WindowCompat.getInsetsController(window, view)
+                        insetsController.isAppearanceLightStatusBars = !isDarkTheme
+                        insetsController.isAppearanceLightNavigationBars = !isDarkTheme
+                        @Suppress("DEPRECATION")
+                        window.statusBarColor = if (isDarkTheme) {
+                            android.graphics.Color.parseColor("#090D16")
+                        } else {
+                            android.graphics.Color.parseColor("#F8FAFC")
+                        }
+                        @Suppress("DEPRECATION")
+                        window.navigationBarColor = if (isDarkTheme) {
+                            android.graphics.Color.parseColor("#131926")
+                        } else {
+                            android.graphics.Color.parseColor("#FFFFFF")
+                        }
+                    }
+                }
             }
 
             // Automatic update check on app launch (background, non-blocking, rate-limited)

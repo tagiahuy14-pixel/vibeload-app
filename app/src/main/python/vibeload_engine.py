@@ -97,24 +97,21 @@ def clean_and_normalize_url(raw_url):
 def resolve_redirect_if_needed(url):
     """
     Follow HTTP redirects for short links and share wrappers:
-    - TikTok: vt.tiktok.com, vm.tiktok.com
     - Facebook: fb.watch, facebook.com/share/
+    Note: TikTok shortlinks (vt.tiktok.com, vm.tiktok.com) are preserved as-is
+    so that TikWM and specialized extractors can parse them with their dedicated unshorteners.
     """
     if not url:
         return ""
     url_lower = url.lower()
-    if any(k in url_lower for k in ("vt.tiktok.com", "vm.tiktok.com", "fb.watch", "facebook.com/share/")):
+    if any(k in url_lower for k in ("fb.watch", "facebook.com/share/")):
         try:
-            req = urllib.request.Request(url, headers=DEFAULT_HEADERS)
+            headers = dict(DEFAULT_HEADERS)
+            headers["User-Agent"] = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+            req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=10) as resp:
                 resolved = resp.geturl()
                 if resolved:
-                    # Guard for TikTok: if it redirected to the home page or root path,
-                    # DO NOT use it! Keep the original short URL so TikWM/extractors can parse it.
-                    if "vt.tiktok.com" in url_lower or "vm.tiktok.com" in url_lower:
-                        parsed = urllib.parse.urlparse(resolved)
-                        if parsed.path in ("", "/") or "login" in resolved.lower():
-                            return url
                     return resolved
         except Exception:
             pass
@@ -127,6 +124,15 @@ def format_error_message(err_str, url=""):
     """
     err_lower = (err_str or "").lower()
     url_lower = (url or "").lower()
+
+    # TikTok incomplete shortlink check
+    if "vt.tiktok.com" in url_lower or "vm.tiktok.com" in url_lower:
+        match = re.search(r'tiktok\.com/([A-Za-z0-9_-]+)', url_lower)
+        if match and len(match.group(1)) < 7:
+            return "Đường dẫn TikTok chưa đầy đủ (mã liên kết rút gọn thường có từ 9 đến 10 ký tự). Vui lòng sao chép lại toàn bộ liên kết từ TikTok."
+
+    if "url parsing is failed" in err_lower or "check url" in err_lower:
+        return "Liên kết không đúng định dạng hoặc bài viết không tồn tại. Vui lòng kiểm tra lại liên kết."
 
     # 1. YouTube Bot Detection / Security Challenge
     if "confirm you're not a bot" in err_lower or "not a bot" in err_lower:
@@ -182,6 +188,7 @@ def extract_tiktok_via_tikwm(url):
     Secondary fallback for TikTok photo carousels/slides, videos, and music via TikWM API.
     """
     endpoints = ["https://www.tikwm.com/api/", "https://tikwm.com/api/"]
+    mobile_ua = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
     for ep in endpoints:
         try:
             data = urllib.parse.urlencode({"url": url, "hd": 1}).encode("utf-8")
@@ -189,7 +196,7 @@ def extract_tiktok_via_tikwm(url):
                 ep,
                 data=data,
                 headers={
-                    "User-Agent": DEFAULT_HEADERS["User-Agent"],
+                    "User-Agent": mobile_ua,
                     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                     "Accept": "application/json, text/javascript, */*; q=0.01"
                 }

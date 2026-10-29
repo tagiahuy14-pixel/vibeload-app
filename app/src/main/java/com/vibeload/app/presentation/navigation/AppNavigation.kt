@@ -1,11 +1,15 @@
 package com.vibeload.app.presentation.navigation
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -53,25 +57,30 @@ fun AppNavigation(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = androidx.compose.ui.graphics.Color(0xFF0B0F19),
-                    tonalElevation = 8.dp
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 6.dp,
+                    modifier = Modifier.border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp)
+                    )
                 ) {
                     bottomNavItems.forEach { screen ->
                         val selected = currentRoute == screen.route
                         NavigationBarItem(
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = androidx.compose.ui.graphics.Color.White,
-                                selectedTextColor = androidx.compose.ui.graphics.Color(0xFF60A5FA),
-                                unselectedIconColor = androidx.compose.ui.graphics.Color(0xFF64748B),
-                                unselectedTextColor = androidx.compose.ui.graphics.Color(0xFF64748B),
-                                indicatorColor = androidx.compose.ui.graphics.Color(0xFF1D4ED8)
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                             ),
                             icon = {
                                 if (screen == Screen.Downloading && isDownloadActive) {
                                     BadgedBox(
                                         badge = {
-                                            Badge(containerColor = androidx.compose.ui.graphics.Color(0xFF3B82F6)) {
-                                                Text("1", color = androidx.compose.ui.graphics.Color.White)
+                                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                                Text("1", color = Color.White)
                                             }
                                         }
                                     ) {
@@ -81,7 +90,7 @@ fun AppNavigation(
                                     Icon(screen.icon, contentDescription = screen.title)
                                 }
                             },
-                            label = { Text(screen.title, fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal) },
+                            label = { Text(screen.title, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
                             selected = selected,
                             onClick = {
                                 if (currentRoute != screen.route) {

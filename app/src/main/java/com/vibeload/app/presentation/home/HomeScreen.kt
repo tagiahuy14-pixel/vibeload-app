@@ -334,20 +334,39 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF450A0A))
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
                 ) {
                     Row(
                         modifier = Modifier.padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = Color(0xFFF87171))
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Icon(
+                            imageVector = Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = errorText,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFFFCA5A5)
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
                         )
+                        IconButton(
+                            onClick = { viewModel.clearError() },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Đóng",
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -862,7 +881,7 @@ fun HomeScreen(
                 text = "Tệp đã tải về",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -883,13 +902,13 @@ fun HomeScreen(
                         Text(
                             text = sortLabel,
                             fontSize = 13.sp,
-                            color = Color(0xFF94A3B8)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
-                            tint = Color(0xFF94A3B8),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -938,7 +957,7 @@ fun HomeScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
                         contentDescription = "Kiểu danh sách",
-                        tint = Color(0xFF94A3B8),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -952,21 +971,40 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 32.dp),
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                    .padding(vertical = 36.dp, horizontal = 20.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.FolderOpen,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = Color(0xFF334155)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Chưa có tệp nào được tải về",
-                        color = Color(0xFF64748B),
-                        fontSize = 14.sp
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Dán liên kết phía trên để bắt đầu tải xuống video, âm thanh hoặc ảnh",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             }
@@ -1272,7 +1310,7 @@ fun VibeMediaCard(
                         text = item.title.ifBlank { item.fileName },
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1366,13 +1404,13 @@ fun VibeMediaCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Play / View Button (Blue Pill)
+                // Play / View Button (Tonal Primary Pill)
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(34.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF1E3A8A))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                         .clickable { onPlay() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1380,26 +1418,26 @@ fun VibeMediaCard(
                         Icon(
                             imageVector = if (item.isImage) Icons.Default.Visibility else Icons.Default.PlayArrow,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = if (item.isImage) "Xem ảnh" else "Phát",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
 
-                // Open Folder Button (Dark Blue Pill)
+                // Open Folder Button (Tonal SurfaceVariant Pill)
                 Box(
                     modifier = Modifier
                         .weight(1.3f)
                         .height(34.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF1E293B))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable { onOpenFolder() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1407,26 +1445,26 @@ fun VibeMediaCard(
                         Icon(
                             imageVector = Icons.Default.FolderOpen,
                             contentDescription = null,
-                            tint = Color(0xFFCBD5E1),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Mở thư mục",
-                            color = Color(0xFFCBD5E1),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
 
-                // Delete Button (Red Pill)
+                // Delete Button (Tonal Error Pill)
                 Box(
                     modifier = Modifier
                         .weight(0.9f)
                         .height(34.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF450A0A))
+                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f))
                         .clickable { onDelete() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1434,13 +1472,13 @@ fun VibeMediaCard(
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
                             contentDescription = null,
-                            tint = Color(0xFFFCA5A5),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Xóa",
-                            color = Color(0xFFFCA5A5),
+                            color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
