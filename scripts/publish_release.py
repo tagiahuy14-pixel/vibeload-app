@@ -228,11 +228,11 @@ def main():
         update_release_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/{release_id}"
         api_request(update_release_url, method="PATCH", data={"body": release_body, "name": f"VibeLoad {tag_name}"}, headers=auth_header)
 
-        # Xoa asset cu neu trung ten app-release.apk
+        # Xoa asset cu neu trung ten app-release.apk hoac version.json
         assets = release_data.get("assets", [])
         for asset in assets:
-            if asset.get("name") == "app-release.apk":
-                print(f"[INFO] Dang xoa file APK cu de thay the (Asset ID: {asset['id']})...")
+            if asset.get("name") in ("app-release.apk", "version.json"):
+                print(f"[INFO] Dang xoa file {asset.get('name')} cu de thay the (Asset ID: {asset['id']})...")
                 del_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/assets/{asset['id']}"
                 api_request(del_url, method="DELETE", headers=auth_header)
     else:
@@ -314,6 +314,33 @@ def main():
         print(f"[WARN] Lan {attempt} that bai (HTTP {upload_status}): {upload_res.get('error') if isinstance(upload_res, dict) else upload_res}")
 
     if upload_status in (200, 201):
+        # 6. Upload version.json manifest
+        try:
+            version_json_path = os.path.join(ROOT_DIR, "version.json")
+            version_manifest = {
+                "versionCode": version_code,
+                "versionName": version_name,
+                "downloadUrl": f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/{tag_name}/app-release.apk",
+                "sha256": sha256,
+                "mandatory": False,
+                "releaseNotes": f"Cập nhật biểu tượng Logo mới. Sửa lỗi hiển thị nút lọc 'Ảnh' bị co dãn dọc. Tối ưu giao diện responsive trên mọi kích thước màn hình điện thoại (Xiaomi 15/17 Ultra, Samsung S25/S26 Ultra, Oppo, Vivo)."
+            }
+            with open(version_json_path, "w", encoding="utf-8") as f:
+                json.dump(version_manifest, f, ensure_ascii=False, indent=2)
+
+            version_upload_url = upload_url_template.split("{")[0] + "?name=version.json"
+            with open(version_json_path, "rb") as f:
+                v_bytes = f.read()
+            v_headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "Content-Length": str(len(v_bytes))
+            }
+            api_request(version_upload_url, method="POST", data=v_bytes, headers=v_headers)
+            print("[OK] Da tai len version.json manifest thanh cong!")
+        except Exception as e:
+            print(f"[WARN] Khong the tai len version.json: {e}")
+
         print("\n" + "=" * 60)
         print("[SUCCESS] TU DONG PHAT HANH RELEASE THANH CONG!")
         print("=" * 60)

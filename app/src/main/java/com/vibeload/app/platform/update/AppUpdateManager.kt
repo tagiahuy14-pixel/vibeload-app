@@ -220,66 +220,153 @@ class AppUpdateManager(
         }
 
         try {
-            val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "VibeLoad-Android-Client")
-                .header("Accept", "application/vnd.github.v3+json")
-                .build()
-
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(
-                    Exception("Máy chủ cập nhật chưa có bản phát hành hoặc không phản hồi (HTTP ${response.code}).")
-                )
-            }
-
-            val bodyStr = response.body?.string() ?: return@withContext Result.failure(Exception("Phản hồi rỗng từ máy chủ"))
-            val json = JSONObject(bodyStr)
-            val tagName = json.optString("tag_name", "v1.0.0")
-            val releaseNotes = json.optString("body", "Cải thiện hiệu năng và sửa lỗi.")
-
-            var apkUrl = ""
+            var tagName: String? = null
+            var releaseNotes: String = ""
+            var apkUrl: String = ""
             var apkChecksum: String? = null
             var manifestMandatory = false
             var manifestVersionCode: Int? = null
 
-            // 1. Check for SHA-256 pattern in release notes body
-            val shaMatcher = Pattern.compile("(?i)([a-f0-9]{64})").matcher(releaseNotes)
-            if (shaMatcher.find()) {
-                apkChecksum = shaMatcher.group(1)
-            }
+            // 1. STRATEGY 1: GitHub REST API
+            try {
+                val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile; VibeLoad-Client)")
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .build()
 
-            // 2. Parse assets for APK and manifest
-            val assets = json.optJSONArray("assets")
-            if (assets != null) {
-                for (i in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(i)
-                    val name = asset.optString("name", "")
-                    if (name.endsWith(".apk", ignoreCase = true) && apkUrl.isEmpty()) {
-                        apkUrl = asset.optString("browser_download_url", "")
-                    }
-                    if (name.contains("manifest", ignoreCase = true) && name.endsWith(".json", ignoreCase = true)) {
-                        val manifestUrl = asset.optString("browser_download_url", "")
-                        if (manifestUrl.isNotEmpty()) {
-                            try {
-                                val mReq = Request.Builder().url(manifestUrl).build()
-                                val mRes = client.newCall(mReq).execute()
-                                if (mRes.isSuccessful) {
-                                    val mBody = mRes.body?.string() ?: ""
-                                    val mJson = JSONObject(mBody)
-                                    manifestMandatory = mJson.optBoolean("mandatory", false)
-                                    if (mJson.has("versionCode")) {
-                                        manifestVersionCode = mJson.optInt("versionCode")
-                                    }
-                                    if (mJson.has("sha256")) {
-                                        apkChecksum = mJson.optString("sha256")
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val bodyStr = response.body?.string() ?: ""
+                    if (bodyStr.isNotBlank()) {
+                        val json = JSONObject(bodyStr)
+                        tagName = json.optString("tag_name", "").ifBlank { null }
+                        releaseNotes = json.optString("body", "Cải thiện hiệu năng và sửa lỗi.")
+
+                        // Check for SHA-256 pattern in release notes body
+                        val shaMatcher = Pattern.compile("(?i)([a-f0-9]{64})").matcher(releaseNotes)
+                        if (shaMatcher.find()) {
+                            apkChecksum = shaMatcher.group(1)
+                        }
+
+                        val assets = json.optJSONArray("assets")
+                        if (assets != null) {
+                            for (i in 0 until assets.length()) {
+                                val asset = assets.getJSONObject(i)
+                                val name = asset.optString("name", "")
+                                if (name.endsWith(".apk", ignoreCase = true) && apkUrl.isEmpty()) {
+                                    apkUrl = asset.optString("browser_download_url", "")
+                                }
+                                if (name.contains("manifest", ignoreCase = true) && name.endsWith(".json", ignoreCase = true)) {
+                                    val manifestUrl = asset.optString("browser_download_url", "")
+                                    if (manifestUrl.isNotEmpty()) {
+                                        try {
+                                            val mReq = Request.Builder().url(manifestUrl).build()
+                                            val mRes = client.newCall(mReq).execute()
+                                            if (mRes.isSuccessful) {
+                                                val mBody = mRes.body?.string() ?: ""
+                                                val mJson = JSONObject(mBody)
+                                                manifestMandatory = mJson.optBoolean("mandatory", false)
+                                                if (mJson.has("versionCode")) {
+                                                    manifestVersionCode = mJson.optInt("versionCode")
+                                                }
+                                                if (mJson.has("sha256")) {
+                                                    apkChecksum = mJson.optString("sha256")
+                                                }
+                                            }
+                                        } catch (_: Exception) { }
                                     }
                                 }
-                            } catch (_: Exception) { }
+                            }
                         }
                     }
                 }
+            } catch (_: Exception) {
+                // Ignore API failure, fall through to web / CDN strategies
+            }
+
+            // 2. STRATEGY 2: GitHub Web Redirect (Bypasses API rate limits entirely - HTTP 403 / 429)
+            // https://github.com/owner/repo/releases/latest redirects to https://github.com/owner/repo/releases/tag/vX.Y.Z
+            if (tagName.isNullOrBlank() || apkUrl.isBlank()) {
+                try {
+                    val webUrl = "https://github.com/$owner/$repo/releases/latest"
+                    val webReq = Request.Builder()
+                        .url(webUrl)
+                        .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                        .build()
+                    val webRes = client.newCall(webReq).execute()
+                    if (webRes.isSuccessful) {
+                        val finalUrl = webRes.request.url.toString()
+                        if (finalUrl.contains("/releases/tag/")) {
+                            val tagFromUrl = finalUrl.substringAfter("/releases/tag/").substringBefore("/").substringBefore("?").trim()
+                            if (tagFromUrl.isNotEmpty()) {
+                                tagName = tagFromUrl
+                                apkUrl = "https://github.com/$owner/$repo/releases/download/$tagFromUrl/app-release.apk"
+                                val html = webRes.body?.string() ?: ""
+                                val shaCodeMatcher = Pattern.compile("<code>([A-Fa-f0-9]{64})</code>").matcher(html)
+                                if (shaCodeMatcher.find()) {
+                                    apkChecksum = shaCodeMatcher.group(1)
+                                } else {
+                                    val fallbackSha = Pattern.compile("(?i)([a-f0-9]{64})").matcher(html)
+                                    if (fallbackSha.find()) {
+                                        apkChecksum = fallbackSha.group(1)
+                                    }
+                                }
+                                if (releaseNotes.isBlank()) {
+                                    releaseNotes = "Phiên bản mới $tagFromUrl đã sẵn sàng để tải về."
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Ignore, try next fallback
+                }
+            }
+
+            // 3. STRATEGY 3: jsDelivr / GitHub Direct Asset / Raw CDN fallback (version.json)
+            if (tagName.isNullOrBlank() || apkUrl.isBlank()) {
+                val cdnCandidates = listOf(
+                    "https://github.com/$owner/$repo/releases/latest/download/version.json",
+                    "https://cdn.jsdelivr.net/gh/$owner/$repo@master/version.json",
+                    "https://raw.githubusercontent.com/$owner/$repo/master/version.json"
+                )
+                for (cdnUrl in cdnCandidates) {
+                    try {
+                        val cdnReq = Request.Builder()
+                            .url(cdnUrl)
+                            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile)")
+                            .build()
+                        val cdnRes = client.newCall(cdnReq).execute()
+                        if (cdnRes.isSuccessful) {
+                            val cdnBody = cdnRes.body?.string() ?: ""
+                            if (cdnBody.isNotBlank()) {
+                                val cdnJson = JSONObject(cdnBody)
+                                val vName = cdnJson.optString("versionName", "")
+                                val dlUrl = cdnJson.optString("downloadUrl", "")
+                                if (vName.isNotEmpty() && dlUrl.isNotEmpty()) {
+                                    tagName = vName
+                                    apkUrl = dlUrl
+                                    apkChecksum = if (cdnJson.has("sha256")) cdnJson.optString("sha256") else null
+                                    if (cdnJson.has("versionCode")) {
+                                        manifestVersionCode = cdnJson.optInt("versionCode")
+                                    }
+                                    manifestMandatory = cdnJson.optBoolean("mandatory", false)
+                                    if (releaseNotes.isBlank()) {
+                                        releaseNotes = cdnJson.optString("releaseNotes", "Phiên bản mới $vName.")
+                                    }
+                                    break
+                                }
+                            }
+                        }
+                    } catch (_: Exception) { }
+                }
+            }
+
+            if (tagName.isNullOrBlank() || apkUrl.isBlank()) {
+                return@withContext Result.failure(
+                    Exception("Máy chủ cập nhật chưa có bản phát hành hoặc không phản hồi. Vui lòng thử lại sau.")
+                )
             }
 
             // 3. Check if release body includes [MANDATORY] or {"mandatory": true}
