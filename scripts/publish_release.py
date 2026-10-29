@@ -202,21 +202,18 @@ def main():
 `{sha256}`
 
 ### Tính năng & Sửa lỗi nổi bật:
-- 🚀 **Cập nhật Biểu tượng Logo mới (App Icon)**:
-  - Thiết kế logo nhận diện thương hiệu hoàn toàn mới: Gradient chuyển sắc xanh dương - tím điện tử hiện đại, điểm nhấn họa tiết ruy-băng 3D cách điệu Play/Download.
-  - Hỗ trợ đầy đủ Adaptive Icons (Biểu tượng thích ứng) và toàn bộ bộ phân giải Mipmap (MDPI đến XXXHDPI).
-  - Tương thích và bo viền chuẩn xác trên mọi giao diện launcher: Xiaomi HyperOS (Xiaomi 15 Ultra, 17 Ultra, 18 Pro/Max), Samsung OneUI (S25 Ultra, S26, S26 Ultra), Oppo ColorOS, Vivo OriginOS và Pixel Launcher.
-- 📱 **Sửa lỗi hiển thị & Tối ưu bố cục thích ứng đa màn hình**:
-  - Khắc phục triệt để lỗi viên thuốc lọc *"Ảnh"* bị co ép thành dải dọc kéo dài trên màn hình tiêu chuẩn hoặc khi bật tỷ lệ phóng to chữ/hiển thị của máy.
-  - Bổ sung cuộn ngang mượt mà cho hàng bộ lọc thư viện (*Tất cả, Video, Âm thanh, Ảnh*), đảm bảo không bao giờ bị co rúm, méo chữ trên bất kỳ kích cỡ điện thoại nào.
-  - Tối ưu căn chỉnh hàng phím tắt nền tảng (YouTube, TikTok, Facebook, Instagram, X) đều đặn, chống tràn viền.
-- 🎨 **Đồng bộ hoàn hảo giao diện Sáng / Tối**:
-  - Thanh Bottom Bar và System Bars (thanh trạng thái & thanh điều hướng cử chỉ) chuyển màu chính xác theo theme hệ thống hoặc chế độ người dùng chọn.
-  - Sửa dứt điểm lỗi nhãn *"Tệp đã tải về"* bị tàng hình trong chế độ sáng.
-- 🖼️ **Tải Album ảnh TikTok & Chọn lọc ảnh tiện lợi**:
-  - Tự động nhận diện bài viết album ảnh TikTok (`vt.tiktok.com`, `tiktok.com/@user/photo/...`).
-  - Hỗ trợ xem lướt album và đánh dấu chọn từng ảnh (1, 3, 5, 7...) để tải nhanh về máy kèm nhạc nền gốc.
-- 📲 **Cập nhật OTA mượt mà**: Tự động thông báo và cập nhật tức thì.
+- 🎨 **Tối ưu độ tương phản & Sửa lỗi hiển thị Hộp thoại Cập nhật (OTA Update Dialog)**:
+  - Khắc phục triệt để lỗi màu chữ trắng/xám bạc bị chìm trên nền trắng khi máy ở Chế độ sáng (Light Theme).
+  - Chuyển đổi toàn bộ sang Material 3 Theme Tokens: Tiêu đề rõ ràng, phiên bản mới màu Primary nổi bật, hộp thông tin ghi chú bo cong hiện đại và dễ đọc trên cả 2 chế độ Sáng và Tối.
+- 🎵 **Nhận diện thông minh & Hướng dẫn tải âm thanh TikTok (Sound/Music)**:
+  - Tự động nhận diện liên kết Danh mục Âm thanh TikTok (`/music/` hoặc shortlink `vt.tiktok.com` dẫn tới trang đĩa nhạc).
+  - Tự động truy xuất Tên bài hát và Tác giả gốc qua OpenGraph/oEmbed (ví dụ: *"♬ music - KJ Rap Life"*).
+  - Hướng dẫn trực quan, chính xác cho người dùng cách sao chép liên kết video phát bài hát để trích xuất file MP3 chất lượng cao nhất mà không bị báo lỗi xác minh bảo mật.
+- ⚡ **Cơ chế cập nhật OTA đa tầng (Multi-tier CDN Fallback)**:
+  - Chống chặn giới hạn HTTP 403 Rate Limit trên mạng di động 4G/5G với cơ chế dự phòng 3 lớp (GitHub API -> Web 302 Redirect -> jsDelivr CDN manifest).
+- 🚀 **Biểu tượng Logo mới & Giao diện thích ứng siêu mượt**:
+  - Hỗ trợ Adaptive Icons toàn diện trên Xiaomi HyperOS, Samsung OneUI, ColorOS, OriginOS.
+  - Thanh điều hướng và bộ lọc media thích ứng hoàn hảo trên mọi tỷ lệ màn hình.
 """
 
     if status_code == 200 and isinstance(release_data, dict) and "id" in release_data:
@@ -323,7 +320,7 @@ def main():
                 "downloadUrl": f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/{tag_name}/app-release.apk",
                 "sha256": sha256,
                 "mandatory": False,
-                "releaseNotes": f"Cập nhật biểu tượng Logo mới. Sửa lỗi hiển thị nút lọc 'Ảnh' bị co dãn dọc. Tối ưu giao diện responsive trên mọi kích thước màn hình điện thoại (Xiaomi 15/17 Ultra, Samsung S25/S26 Ultra, Oppo, Vivo)."
+                "releaseNotes": f"Tối ưu độ tương phản và sửa lỗi hiển thị chữ trong Hộp thoại Cập nhật (hỗ trợ hoàn hảo Chế độ sáng/tối). Nhận diện thông minh và hướng dẫn trích xuất âm thanh MP3 từ liên kết TikTok Sound/Music."
             }
             with open(version_json_path, "w", encoding="utf-8") as f:
                 json.dump(version_manifest, f, ensure_ascii=False, indent=2)

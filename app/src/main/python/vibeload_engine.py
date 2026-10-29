@@ -142,11 +142,15 @@ def format_error_message(err_str, url=""):
     if "instagram:story" in err_lower or "cookies-from-browser" in err_lower or ("instagram" in url_lower and ("unreachable" in err_lower or "cookie" in err_lower or "login" in err_lower)):
         return "Tin (Story) hoặc bài viết Instagram này yêu cầu đăng nhập tài khoản để xem. Vui lòng thử tải các bài viết hoặc Reels công khai."
 
-    # 3. TikTok Photo / Slideshow Album / Content
+    # 3. TikTok Music / Sound Track Listing Catalog
+    if "/music/" in err_lower or "/music/" in url_lower or "share_music_id" in err_lower or "share_music_id" in url_lower or "tiktok:sound" in err_lower:
+        return "Liên kết bạn vừa dán là Danh mục Âm thanh (Sound/Music) của TikTok, không phải video phát bài hát.\n\n💡 Hướng dẫn tải âm thanh MP3:\n1. Mở video TikTok bất kỳ đang phát bài hát này.\n2. Bấm nút Chia sẻ (Share) -> chọn \"Sao chép liên kết\".\n3. Dán liên kết video đó vào VibeLoad, ứng dụng sẽ tự động trích xuất file MP3 chất lượng cao nhất cho bạn!"
+
+    # 4. TikTok Photo / Slideshow Album / Content
     if "/photo/" in url_lower or ("tiktok" in url_lower and ("photo" in err_lower or "unsupported url" in err_lower)):
         return "Không thể tải nội dung TikTok này. Bài viết có thể ở chế độ riêng tư, đã bị xóa hoặc TikTok đang yêu cầu xác minh bảo mật."
 
-    # 4. Facebook Private / Closed Group / Login Wall
+    # 5. Facebook Private / Closed Group / Login Wall
     if "cannot parse data" in err_lower or ("facebook" in url_lower and ("login" in err_lower or "unsupported url" in err_lower or "report this issue" in err_lower)):
         return "Không thể lấy dữ liệu video từ Facebook. Bài viết có thể thuộc nhóm kín, ở chế độ riêng tư hoặc Facebook đang yêu cầu đăng nhập tài khoản."
 
@@ -419,6 +423,60 @@ def extract_tiktok_photos(url):
         return direct_res
     return extract_tiktok_via_tikwm(url)
 
+def check_tiktok_music_link(url, clean_url=""):
+    """
+    Detect if the URL or shortlink points to a TikTok Music/Sound catalog (/music/).
+    If detected, fetch the sound title and artist via oembed and return a helpful guidance response.
+    """
+    test_urls = [u for u in [clean_url, url] if u]
+    is_music = False
+    music_final_url = ""
+    music_id = ""
+
+    for u in test_urls:
+        u_lower = u.lower()
+        if "/music/" in u_lower or "share_music_id" in u_lower:
+            is_music = True
+            music_final_url = u
+            break
+        if "vt.tiktok.com" in u_lower or "vm.tiktok.com" in u_lower:
+            try:
+                req = urllib.request.Request(u, headers=DEFAULT_HEADERS)
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    redir_url = resp.geturl()
+                    if "/music/" in redir_url.lower() or "share_music_id" in redir_url.lower():
+                        is_music = True
+                        music_final_url = redir_url
+                        break
+            except Exception:
+                pass
+
+    if not is_music:
+        return None
+
+    # Extract music ID
+    m = re.search(r'/music/(?:[^/?#]+-)?(\d+)', music_final_url) or re.search(r'share_music_id=(\d+)', music_final_url)
+    if m:
+        music_id = m.group(1)
+
+    sound_title = "Âm thanh TikTok"
+    sound_author = "TikTok"
+    if music_id:
+        try:
+            oembed_url = f"https://www.tiktok.com/oembed?url=https://www.tiktok.com/music/music-{music_id}"
+            req = urllib.request.Request(oembed_url, headers=DEFAULT_HEADERS)
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                sound_title = data.get('title') or sound_title
+                sound_author = data.get('author_name') or sound_author
+        except Exception:
+            pass
+
+    return {
+        "success": False,
+        "error": f"Liên kết bạn dán là Danh mục Âm thanh \"{sound_title}\" ({sound_author}) của TikTok, không phải video phát bài hát.\n\n💡 Hướng dẫn tải âm thanh MP3:\n1. Mở video TikTok bất kỳ đang phát bài hát này.\n2. Bấm nút Chia sẻ (Share) -> chọn \"Sao chép liên kết\".\n3. Dán liên kết video đó vào VibeLoad, ứng dụng sẽ tự động trích xuất file MP3 chất lượng cao nhất cho bạn!"
+    }
+
 def extract_opengraph_media(url):
     """
     Fallback extractor for platforms (Facebook photos, articles, web pages)
@@ -509,6 +567,11 @@ def analyze_url(url):
             tiktok_photo_res = extract_tiktok_photos(url)
         if tiktok_photo_res:
             return json.dumps(tiktok_photo_res)
+
+        # Check if this link points to a TikTok Sound/Music catalog
+        music_check = check_tiktok_music_link(url, clean_url)
+        if music_check:
+            return json.dumps(music_check)
 
     target_url = clean_url
     if "/photo/" in clean_url.lower():

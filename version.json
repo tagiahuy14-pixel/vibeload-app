@@ -2,7 +2,7 @@
   "versionCode": 10,
   "versionName": "1.0.9",
   "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.9/app-release.apk",
-  "sha256": "00C8737F23A829D9D595DEBD6FAA25F32BBC43EE1A9250AB80CB4F9AEF9D743E",
+  "sha256": "B7D297AAE339A5D509DDEB2E032E3F3349E08768B1FA63FB91AF7D63ACCA7286",
   "mandatory": false,
-  "releaseNotes": "Cập nhật biểu tượng Logo mới hiện đại. Sửa lỗi hiển thị nút lọc 'Ảnh' bị co dãn dọc. Tối ưu giao diện responsive trên mọi kích thước màn hình điện thoại (Xiaomi 15/17 Ultra, Samsung S25/S26 Ultra, Oppo, Vivo)."
+  "releaseNotes": "Cập nhật biểu tượng Logo mới. Sửa lỗi hiển thị nút lọc 'Ảnh' bị co dãn dọc. Tối ưu giao diện responsive trên mọi kích thước màn hình điện thoại (Xiaomi 15/17 Ultra, Samsung S25/S26 Ultra, Oppo, Vivo)."
 }

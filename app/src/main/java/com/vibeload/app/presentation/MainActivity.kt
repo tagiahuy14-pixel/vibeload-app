@@ -183,7 +183,7 @@ class MainActivity : ComponentActivity() {
                                     text = "Đã có phiên bản VibeLoad mới!",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             text = {
@@ -194,23 +194,25 @@ class MainActivity : ComponentActivity() {
                                     Text(
                                         text = "Phiên bản hiện tại: v${info.currentVersionName} (${info.currentVersionCode})",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF94A3B8)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
                                         text = "Phiên bản mới: v${info.latestVersionName} (${info.latestVersionCode})",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF38BDF8)
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
 
                                     if (info.isMandatory) {
                                         Card(
-                                            colors = CardDefaults.cardColors(containerColor = Color(0xFF450A0A)),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.errorContainer
+                                            ),
                                             shape = RoundedCornerShape(8.dp)
                                         ) {
                                             Text(
                                                 text = "⚠️ Đây là bản cập nhật bắt buộc theo chính sách phát hành của ứng dụng.",
-                                                color = Color(0xFFFCA5A5),
+                                                color = MaterialTheme.colorScheme.onErrorContainer,
                                                 fontSize = 12.sp,
                                                 modifier = Modifier.padding(8.dp)
                                             )
@@ -222,19 +224,28 @@ class MainActivity : ComponentActivity() {
                                         text = "Nội dung thay đổi:",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp,
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    Text(
-                                        text = info.releaseNotesVi.ifBlank { "Cải thiện hiệu năng và sửa lỗi." },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFFCBD5E1)
-                                    )
+                                    Card(
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                        ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = info.releaseNotesVi.ifBlank { "Cải thiện hiệu năng và sửa lỗi." },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(10.dp)
+                                        )
+                                    }
 
                                     if (prompt.isDownloading) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
                                             text = "Đang tải APK: ${prompt.downloadProgress}%",
-                                            color = Color(0xFF38BDF8),
+                                            color = MaterialTheme.colorScheme.primary,
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 13.sp
                                         )
@@ -244,24 +255,28 @@ class MainActivity : ComponentActivity() {
                                                 .fillMaxWidth()
                                                 .height(6.dp)
                                                 .clip(RoundedCornerShape(3.dp)),
-                                            color = Color(0xFF2563EB)
+                                            color = MaterialTheme.colorScheme.primary,
+                                            trackColor = MaterialTheme.colorScheme.surfaceVariant
                                         )
                                     }
 
                                     if (prompt.errorMessage != null) {
                                         Text(
                                             text = prompt.errorMessage,
-                                            color = Color(0xFFEF4444),
+                                            color = MaterialTheme.colorScheme.error,
                                             fontSize = 12.sp
                                         )
                                         if (prompt.errorMessage.contains("quyền", ignoreCase = true) || prompt.errorMessage.contains("Cho phép", ignoreCase = true)) {
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Button(
                                                 onClick = { container.appUpdateManager.openInstallPermissionSettings() },
-                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary,
+                                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                                ),
                                                 shape = RoundedCornerShape(8.dp)
                                             ) {
-                                                Text("Mở Cài đặt cấp quyền", color = Color.White, fontSize = 12.sp)
+                                                Text("Mở Cài đặt cấp quyền", fontSize = 12.sp)
                                             }
                                         }
                                     }
@@ -271,11 +286,15 @@ class MainActivity : ComponentActivity() {
                                 Button(
                                     onClick = { container.appUpdateManager.confirmUpdate() },
                                     enabled = !prompt.isDownloading,
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
                                 ) {
                                     Text(
-                                        text = if (prompt.isDownloading) "Đang tải..." else "Cập nhật ngay",
-                                        color = Color.White
+                                        text = if (prompt.isDownloading) "Đang tải..." else "Cập nhật ngay"
                                     )
                                 }
                             },
@@ -286,7 +305,8 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             },
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(20.dp)
                         )
                     }
                 }
