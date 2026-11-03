@@ -7,9 +7,11 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -101,6 +103,7 @@ data class SupportedPlatform(
     val name: String,
     val iconResId: Int,
     val brandColor: Color,
+    val containerBgColor: Color,
     val badge: String,
     val domains: List<String>,
     val appPackage: String?,
@@ -114,6 +117,7 @@ val SUPPORTED_PLATFORMS = listOf(
         name = "TikTok",
         iconResId = R.drawable.ic_platform_tiktok,
         brandColor = Color(0xFF25F4EE),
+        containerBgColor = Color(0xFF0F172A), // Deep Dark Slate container for authentic TikTok 3D note contrast
         badge = "Video • MP3 • Ảnh",
         domains = listOf("tiktok.com", "douyin.com"),
         appPackage = "com.zhiliaoapp.musically",
@@ -129,6 +133,7 @@ val SUPPORTED_PLATFORMS = listOf(
         name = "YouTube",
         iconResId = R.drawable.ic_platform_youtube,
         brandColor = Color(0xFFFF0000),
+        containerBgColor = Color(0xFFFEE2E2), // Soft Rose background for red play icon
         badge = "4K • Shorts • MP3",
         domains = listOf("youtube.com", "youtu.be"),
         appPackage = "com.google.android.youtube",
@@ -144,6 +149,7 @@ val SUPPORTED_PLATFORMS = listOf(
         name = "SoundCloud",
         iconResId = R.drawable.ic_platform_soundcloud,
         brandColor = Color(0xFFFF5500),
+        containerBgColor = Color(0xFFFFEDD5), // Soft Orange background for orange SoundCloud icon
         badge = "Nhạc MP3 320k",
         domains = listOf("soundcloud.com"),
         appPackage = "com.soundcloud.android",
@@ -159,6 +165,7 @@ val SUPPORTED_PLATFORMS = listOf(
         name = "Instagram",
         iconResId = R.drawable.ic_platform_instagram,
         brandColor = Color(0xFFE1306C),
+        containerBgColor = Color(0xFFFCE7F3), // Soft Pink background for Instagram icon
         badge = "Reels • Ảnh • Story",
         domains = listOf("instagram.com"),
         appPackage = "com.instagram.android",
@@ -174,6 +181,7 @@ val SUPPORTED_PLATFORMS = listOf(
         name = "Facebook",
         iconResId = R.drawable.ic_platform_facebook,
         brandColor = Color(0xFF1877F2),
+        containerBgColor = Color(0xFFDBEAFE), // Soft Blue background for Facebook icon
         badge = "Video HD • Reels",
         domains = listOf("facebook.com", "fb.watch"),
         appPackage = "com.facebook.katana",
@@ -189,6 +197,7 @@ val SUPPORTED_PLATFORMS = listOf(
         name = "X (Twitter)",
         iconResId = R.drawable.ic_platform_x,
         brandColor = Color(0xFF0F1419),
+        containerBgColor = Color(0xFF0F1419), // Deep Dark background for White X
         badge = "Video • GIF • Ảnh",
         domains = listOf("x.com", "twitter.com"),
         appPackage = "com.twitter.android",
@@ -204,6 +213,7 @@ val SUPPORTED_PLATFORMS = listOf(
         name = "Threads",
         iconResId = R.drawable.ic_platform_threads,
         brandColor = Color(0xFF8B5CF6),
+        containerBgColor = Color(0xFF18181B), // Deep Dark background for White Threads @
         badge = "Video • Media",
         domains = listOf("threads.net"),
         appPackage = "com.instagram.barcelona",
@@ -218,6 +228,7 @@ val SUPPORTED_PLATFORMS = listOf(
         name = "100+ Khác",
         iconResId = R.drawable.ic_platform_more,
         brandColor = Color(0xFF6366F1),
+        containerBgColor = Color(0xFFEDE9FE), // Soft Purple background for 100+ icon
         badge = "yt-dlp Core",
         domains = emptyList(),
         appPackage = null,
@@ -1516,21 +1527,21 @@ fun ModernPlatformCard(
 ) {
     Card(
         modifier = Modifier
-            .width(135.dp)
+            .width(138.dp)
             .bounceClick { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             horizontalAlignment = Alignment.Start
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(platform.brandColor.copy(alpha = 0.15f)),
+                    .background(platform.containerBgColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1545,7 +1556,7 @@ fun ModernPlatformCard(
 
             Text(
                 text = platform.name,
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -1556,8 +1567,7 @@ fun ModernPlatformCard(
 
             Text(
                 text = platform.badge,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1675,16 +1685,16 @@ fun PlatformGuideDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(40.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(platform.brandColor.copy(alpha = 0.15f)),
+                        .background(platform.containerBgColor),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(id = platform.iconResId),
                         contentDescription = platform.name,
                         tint = Color.Unspecified,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
@@ -1785,19 +1795,26 @@ fun FilterPill(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val gradient = Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF7C3AED)))
-    val bgColor = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.surface
-    val borderColor = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outlineVariant
+    val selectedBgColor = MaterialTheme.colorScheme.primary
+    val unselectedBgColor = MaterialTheme.colorScheme.surface
+    val selectedContentColor = MaterialTheme.colorScheme.onPrimary // Pure solid White
+    val unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    val targetBgColor = if (isSelected) selectedBgColor else unselectedBgColor
+    val targetContentColor = if (isSelected) selectedContentColor else unselectedContentColor
+    val targetBorderColor = if (isSelected) selectedBgColor else MaterialTheme.colorScheme.outlineVariant
+
+    val animBgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(200), label = "pillBg")
+    val animContentColor by animateColorAsState(targetValue = targetContentColor, animationSpec = tween(200), label = "pillContent")
+    val animBorderColor by animateColorAsState(targetValue = targetBorderColor, animationSpec = tween(200), label = "pillBorder")
 
     Box(
         modifier = Modifier
             .height(38.dp)
             .defaultMinSize(minWidth = 92.dp)
             .clip(RoundedCornerShape(19.dp))
-            .then(
-                if (isSelected) Modifier.background(gradient) else Modifier.background(bgColor)
-            )
-            .border(1.dp, borderColor, RoundedCornerShape(19.dp))
+            .background(animBgColor)
+            .border(1.dp, animBorderColor, RoundedCornerShape(19.dp))
             .bounceClick { onClick() }
             .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
@@ -1809,7 +1826,7 @@ fun FilterPill(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = animContentColor,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -1817,7 +1834,7 @@ fun FilterPill(
                 text = if (count != null) "$title $count" else title,
                 fontSize = 13.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = animContentColor,
                 maxLines = 1,
                 softWrap = false
             )

@@ -202,23 +202,12 @@ def main():
 `{sha256}`
 
 ### Tính năng & Cải tiến nổi bật:
-- 🎨 **Tái thiết kế Giao diện Hiện đại & Trực quan (chuẩn animate-ui & antigravity-skills)**:
-  - **Nền tảng hỗ trợ nổi bật**: Hiển thị trực quan 8 thương hiệu lớn: **TikTok**, **YouTube**, **SoundCloud**, **Instagram**, **Facebook**, **X (Twitter)**, **Threads**, và **100+ Khác**.
-  - **Minh bạch tính năng & định dạng tải**: Từng thẻ nền tảng hiển thị rõ ràng những nội dung tải được:
-    - *TikTok*: Video sạch logo • Âm thanh gốc • Album ảnh
-    - *YouTube*: Video 4K UHD • Shorts • Tách MP3
-    - *SoundCloud*: Nhạc MP3 320kbps chất lượng cao • Podcast & Remix
-    - *Instagram*: Reels Full HD • Album ảnh (Carousel) • Story
-    - *Facebook*: Video HD • Watch • Reels
-    - *X (Twitter)*: Video Full HD • GIF • Hình ảnh
-    - *Threads*: Video & Hình ảnh bài đăng
-    - *100+ Khác*: Bilibili, Douyin, Reddit, Pinterest...
-  - **Tương tác thông minh**: Chạm vào từng nền tảng sẽ tự động dán và phân tích ngay nếu có liên kết trong bộ nhớ tạm; nếu chưa có sẽ mở Hộp thoại hướng dẫn chi tiết 3 bước kèm nút mở nhanh ứng dụng.
-  - **3 Thẻ Bento Khả năng Tải**: Giới thiệu rõ nét 3 nhóm định dạng cốt lõi: *🎬 Video Không Logo*, *🎵 Âm Thanh & MP3 320k*, *📸 Album Ảnh Đa Tấm*.
+- 🎨 **Khắc phục lỗi Tương phản & Hiển thị Giao diện (Sáng / Tối)**:
+  - **Biểu tượng TikTok nổi bật chuẩn nhận diện**: Khắc phục lỗi biểu tượng nốt nhạc TikTok bị mờ nhạt/chìm trong Chế độ Sáng (Light Mode). Thùng chứa icon TikTok được chuyển sang nền Dark Slate (`#0F172A`) chuẩn nhận diện thương hiệu, giúp nốt nhạc 3D trắng - đỏ - xanh ngọc tương phản sắc nét 100%.
+  - **Sửa triệt để lỗi Viên thuốc lọc ("Video", "Âm thanh", "Ảnh") bị trắng xóa**: Loại bỏ hoàn toàn lỗi chữ trắng trên nền trắng khi tab được kích hoạt. Trạng thái được chọn chuyển sang nền `Primary` (`#2563EB`) rực rỡ, chữ và icon màu trắng tinh khiết, đi kèm hiệu ứng chuyển màu mượt mà 200ms.
+  - **Tối ưu thẻ Nền tảng hỗ trợ**: Mở rộng bề rộng và khoảng cách padding, khắc phục hiện tượng mép chữ "TikTok" bị cấn/cắt ở phía trên, mang lại bố cục hoàn hảo trên mọi dòng điện thoại.
 - 💫 **Vi tương tác Phản hồi Xúc giác Đàn hồi (Spring Physics Press Effect)**:
   - Tích hợp hiệu ứng đàn hồi nảy êm ái (`Modifier.bounceClick` với spring damping ~0.95) trên toàn bộ nút bấm, thẻ nền tảng, tab lọc và card media.
-- 📱 **Tối ưu hiển thị đa kích thước màn hình**:
-  - Khắc phục triệt để lỗi co giãn viên thuốc lọc thư viện (*Tất cả, Video, Âm thanh, Ảnh*) trên mọi tỷ lệ màn hình điện thoại (Xiaomi 15/17/18, Samsung Galaxy S25/S26 Ultra, Oppo ColorOS, Vivo OriginOS).
 - ⚡ **100% On-Device & Bảo mật**: Toàn bộ quy trình phân tích và tải media diễn ra trực tiếp trên thiết bị, không lưu trữ qua máy chủ trung gian.
 """
 
@@ -326,7 +315,7 @@ def main():
                 "downloadUrl": f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/{tag_name}/app-release.apk",
                 "sha256": sha256,
                 "mandatory": False,
-                "releaseNotes": f"Tái thiết kế giao diện hiện đại & trực quan theo chuẩn animate-ui & antigravity-skills: Bổ sung khu vực Nền tảng hỗ trợ (TikTok, YouTube, SoundCloud, Instagram, Facebook, X, Threads, 100+ Khác) kèm danh sách định dạng hỗ trợ chi tiết; 3 thẻ tính năng tải nổi bật (Video sạch logo, Âm thanh MP3 320k, Album ảnh đa tấm); Vi tương tác đàn hồi xúc giác (Spring physics press effect); Khắc phục triệt để lỗi co giãn viên thuốc lọc thư viện trên mọi kích thước màn hình."
+                "releaseNotes": f"Tối ưu giao diện & sửa lỗi tương phản: Biểu tượng TikTok hiển thị nổi bật sắc nét trên nền Dark Slate ở cả Chế độ Sáng và Tối; Viên thuốc lọc thư viện khi chọn hiển thị nền Primary xanh tím với chữ trắng sắc nét, loại bỏ triệt để lỗi chữ trắng trên nền trắng; Tối ưu khoảng cách và kích thước thẻ nền tảng chống cắt chữ."
             }
             with open(version_json_path, "w", encoding="utf-8") as f:
                 json.dump(version_manifest, f, ensure_ascii=False, indent=2)
