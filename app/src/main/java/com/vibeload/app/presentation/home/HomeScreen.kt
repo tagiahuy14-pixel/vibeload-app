@@ -1,16 +1,26 @@
 package com.vibeload.app.presentation.home
 
+import android.content.ClipDescription
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,14 +33,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +60,176 @@ import com.vibeload.app.presentation.library.LibraryViewModel
 import com.vibeload.app.presentation.theme.AccentPurple
 import java.text.SimpleDateFormat
 import java.util.*
+
+/**
+ * Spring-physics press micro-interaction inspired by animate-ui.
+ * Provides tactile feedback with smooth scale damping (scale ~0.95).
+ */
+fun Modifier.bounceClick(
+    scaleDown: Float = 0.95f,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+): Modifier = composed {
+    if (!enabled) return@composed this
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) scaleDown else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "bounceScale"
+    )
+    this
+        .scale(scale)
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onPress = {
+                    isPressed = true
+                    tryAwaitRelease()
+                    isPressed = false
+                },
+                onTap = { onClick() }
+            )
+        }
+}
+
+/**
+ * Data model for supported platforms showcase.
+ */
+data class SupportedPlatform(
+    val name: String,
+    val iconResId: Int,
+    val brandColor: Color,
+    val badge: String,
+    val domains: List<String>,
+    val appPackage: String?,
+    val webFallback: String,
+    val supportedTypes: List<String>,
+    val quickGuide: String
+)
+
+val SUPPORTED_PLATFORMS = listOf(
+    SupportedPlatform(
+        name = "TikTok",
+        iconResId = R.drawable.ic_platform_tiktok,
+        brandColor = Color(0xFF25F4EE),
+        badge = "Video • MP3 • Ảnh",
+        domains = listOf("tiktok.com", "douyin.com"),
+        appPackage = "com.zhiliaoapp.musically",
+        webFallback = "https://www.tiktok.com",
+        supportedTypes = listOf(
+            "🎬 Video Full HD 100% sạch logo watermark",
+            "🎵 Tải trực tiếp link Âm thanh gốc (/music/)",
+            "📸 Tải toàn bộ album ảnh (chọn lẻ từng ảnh hoặc tất cả)"
+        ),
+        quickGuide = "Mở TikTok -> Chia sẻ (Share) -> Sao chép liên kết -> Quay lại VibeLoad"
+    ),
+    SupportedPlatform(
+        name = "YouTube",
+        iconResId = R.drawable.ic_platform_youtube,
+        brandColor = Color(0xFFFF0000),
+        badge = "4K • Shorts • MP3",
+        domains = listOf("youtube.com", "youtu.be"),
+        appPackage = "com.google.android.youtube",
+        webFallback = "https://www.youtube.com",
+        supportedTypes = listOf(
+            "🎬 Video 4K UHD, 2K, 1080p 60fps sắc nét",
+            "⚡ Video ngắn YouTube Shorts chất lượng gốc",
+            "🎵 Tách âm thanh MP3 từ video ca nhạc để nghe offline"
+        ),
+        quickGuide = "Mở YouTube -> Chia sẻ -> Sao chép liên kết -> Dán vào VibeLoad"
+    ),
+    SupportedPlatform(
+        name = "SoundCloud",
+        iconResId = R.drawable.ic_platform_soundcloud,
+        brandColor = Color(0xFFFF5500),
+        badge = "Nhạc MP3 320k",
+        domains = listOf("soundcloud.com"),
+        appPackage = "com.soundcloud.android",
+        webFallback = "https://soundcloud.com",
+        supportedTypes = listOf(
+            "🎵 Tải bài hát MP3 chất lượng cao lên đến 320kbps",
+            "🎧 Bản phối độc quyền, remix, DJ set & Podcast",
+            "⚡ Tải trực tiếp không cần đăng nhập tài khoản VIP"
+        ),
+        quickGuide = "Mở SoundCloud -> Chia sẻ (Share) -> Copy Link -> Mở VibeLoad"
+    ),
+    SupportedPlatform(
+        name = "Instagram",
+        iconResId = R.drawable.ic_platform_instagram,
+        brandColor = Color(0xFFE1306C),
+        badge = "Reels • Ảnh • Story",
+        domains = listOf("instagram.com"),
+        appPackage = "com.instagram.android",
+        webFallback = "https://www.instagram.com",
+        supportedTypes = listOf(
+            "⚡ Instagram Reels Full HD không mờ",
+            "📸 Bài viết ảnh đơn & Album ảnh (Carousel)",
+            "📱 Story & Video bài đăng công khai"
+        ),
+        quickGuide = "Mở Instagram -> Nhấn biểu tượng Chia sẻ -> Sao chép liên kết"
+    ),
+    SupportedPlatform(
+        name = "Facebook",
+        iconResId = R.drawable.ic_platform_facebook,
+        brandColor = Color(0xFF1877F2),
+        badge = "Video HD • Reels",
+        domains = listOf("facebook.com", "fb.watch"),
+        appPackage = "com.facebook.katana",
+        webFallback = "https://www.facebook.com",
+        supportedTypes = listOf(
+            "🎬 Video HD & 1080p từ Bảng tin & Watch",
+            "⚡ Facebook Reels độ phân giải cao",
+            "🎵 Tách file âm thanh MP3 từ video"
+        ),
+        quickGuide = "Mở Facebook -> Chia sẻ video -> Tùy chọn khác -> Sao chép"
+    ),
+    SupportedPlatform(
+        name = "X (Twitter)",
+        iconResId = R.drawable.ic_platform_x,
+        brandColor = Color(0xFF0F1419),
+        badge = "Video • GIF • Ảnh",
+        domains = listOf("x.com", "twitter.com"),
+        appPackage = "com.twitter.android",
+        webFallback = "https://x.com",
+        supportedTypes = listOf(
+            "🎬 Video bài đăng chất lượng gốc 1080p",
+            "🎞️ Ảnh động GIF không bị vỡ hạt",
+            "📸 Hình ảnh độ phân giải cao"
+        ),
+        quickGuide = "Mở X -> Nhấn nút Chia sẻ dưới bài đăng -> Sao chép liên kết"
+    ),
+    SupportedPlatform(
+        name = "Threads",
+        iconResId = R.drawable.ic_platform_threads,
+        brandColor = Color(0xFF8B5CF6),
+        badge = "Video • Media",
+        domains = listOf("threads.net"),
+        appPackage = "com.instagram.barcelona",
+        webFallback = "https://www.threads.net",
+        supportedTypes = listOf(
+            "🎬 Video chia sẻ trên Threads",
+            "📸 Hình ảnh bài đăng chất lượng sắc nét"
+        ),
+        quickGuide = "Mở Threads -> Nhấn biểu tượng Chia sẻ -> Sao chép liên kết"
+    ),
+    SupportedPlatform(
+        name = "100+ Khác",
+        iconResId = R.drawable.ic_platform_more,
+        brandColor = Color(0xFF6366F1),
+        badge = "yt-dlp Core",
+        domains = emptyList(),
+        appPackage = null,
+        webFallback = "https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md",
+        supportedTypes = listOf(
+            "🌐 Bilibili, Douyin, Kuaishou, Pinterest",
+            "📺 Reddit, Vimeo, Twitch, Dailymotion",
+            "⚡ Hơn 100+ trang web video & âm thanh toàn cầu"
+        ),
+        quickGuide = "Sao chép bất kỳ liên kết video nào và dán vào VibeLoad"
+    )
+)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -62,6 +247,32 @@ fun HomeScreen(
     val scrollState = rememberScrollState()
 
     var sortMenuExpanded by remember { mutableStateOf(false) }
+    var selectedPlatformForGuide by remember { mutableStateOf<SupportedPlatform?>(null) }
+
+    // Check clipboard for smart banner
+    var clipboardCandidateUrl by remember { mutableStateOf<String?>(null) }
+    var clipboardPlatformName by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(uiState.urlInput) {
+        if (uiState.urlInput.isBlank()) {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            val text = clipboard?.primaryClip?.let {
+                if (it.itemCount > 0) it.getItemAt(0).text?.toString()?.trim() else null
+            }
+            if (!text.isNullOrEmpty() && (text.startsWith("http://") || text.startsWith("https://") || text.contains(".com/") || text.contains(".net/") || text.contains(".be/"))) {
+                clipboardCandidateUrl = text
+                clipboardPlatformName = SUPPORTED_PLATFORMS.firstOrNull { p ->
+                    p.domains.any { d -> text.contains(d, ignoreCase = true) }
+                }?.name ?: "Web"
+            } else {
+                clipboardCandidateUrl = null
+                clipboardPlatformName = null
+            }
+        } else {
+            clipboardCandidateUrl = null
+            clipboardPlatformName = null
+        }
+    }
 
     val gradientPrimary = remember {
         Brush.horizontalGradient(
@@ -87,29 +298,43 @@ fun HomeScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 16.dp),
+                .padding(top = 8.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Tải ",
+                        text = "Vibe",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Media",
+                        text = "Load",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
                         style = LocalTextStyle.current.copy(brush = gradientText)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "PRO",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = "Tải video, âm thanh và ảnh đa nền tảng",
-                    fontSize = 13.sp,
+                    text = "Tải video, âm thanh và ảnh đa nền tảng 100% on-device",
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -122,8 +347,8 @@ fun HomeScreen(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surface)
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clickable {
-                            Toast.makeText(context, "VibeLoad Pro — 100% On-Device & Miễn phí", Toast.LENGTH_SHORT).show()
+                        .bounceClick {
+                            Toast.makeText(context, "VibeLoad Pro — 100% On-Device • Không quảng cáo • Tải không giới hạn", Toast.LENGTH_SHORT).show()
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -142,7 +367,7 @@ fun HomeScreen(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surface)
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clickable { onNavigateToSettings() },
+                        .bounceClick { onNavigateToSettings() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -155,13 +380,66 @@ fun HomeScreen(
             }
         }
 
+        // Smart Clipboard Detection Banner
+        clipboardCandidateUrl?.let { url ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                    .bounceClick {
+                        viewModel.onUrlChange(url)
+                        viewModel.analyzeUrl()
+                        clipboardCandidateUrl = null
+                    }
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentPaste,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Phát hiện liên kết ${clipboardPlatformName ?: ""}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = url,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Dán & Tải",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
         // Link Input Box
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
                 .padding(horizontal = 14.dp, vertical = 4.dp)
         ) {
             Row(
@@ -228,14 +506,14 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Big Action Button: "Phân tích liên kết"
+        // Big Action Button: "Phân tích liên kết" with spring tactile bounce
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(gradientPrimary)
-                .clickable(enabled = !uiState.isAnalyzing && uiState.urlInput.isNotBlank()) {
+                .bounceClick(enabled = !uiState.isAnalyzing && uiState.urlInput.isNotBlank()) {
                     viewModel.analyzeUrl()
                 },
             contentAlignment = Alignment.Center
@@ -252,7 +530,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Đang phân tích...",
+                        text = "Đang phân tích liên kết...",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
@@ -275,57 +553,145 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Platform Quick Shortcuts Grid
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            PlatformIcon(
-                label = "YouTube",
-                bgColor = Color(0xFFDC2626),
-                icon = Icons.Default.PlayArrow,
-                iconTint = Color.White,
-                onClick = { handlePlatformClick("youtube.com", viewModel, context) }
-            )
-            PlatformIcon(
-                label = "TikTok",
-                bgColor = Color(0xFF0F172A),
-                icon = Icons.Default.MusicNote,
-                iconTint = Color(0xFF06B6D4),
-                onClick = { handlePlatformClick("tiktok.com", viewModel, context) }
-            )
-            PlatformIcon(
-                label = "Facebook",
-                bgColor = Color(0xFF1877F2),
-                icon = Icons.Default.ThumbUp,
-                iconTint = Color.White,
-                onClick = { handlePlatformClick("facebook.com", viewModel, context) }
-            )
-            PlatformIcon(
-                label = "Instagram",
-                bgColor = Color(0xFFD946EF),
-                icon = Icons.Default.CameraAlt,
-                iconTint = Color.White,
-                onClick = { handlePlatformClick("instagram.com", viewModel, context) }
-            )
-            PlatformIcon(
-                label = "X",
-                bgColor = Color(0xFF1E293B),
-                icon = Icons.Default.Close,
-                iconTint = Color.White,
-                onClick = { handlePlatformClick("x.com", viewModel, context) }
-            )
-            PlatformIcon(
-                label = "Thêm",
-                bgColor = Color(0xFF1E2434),
-                icon = Icons.Default.MoreHoriz,
-                iconTint = Color(0xFF94A3B8),
-                onClick = {
-                    Toast.makeText(context, "Hỗ trợ hơn 100+ trang web thông qua yt-dlp", Toast.LENGTH_SHORT).show()
+        // SECTION: NỀN TẢNG HỖ TRỢ (Supported Platforms Showcase)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Nền tảng hỗ trợ",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Chạm để dán nhanh hoặc xem định dạng tải",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "100+ Trang",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 2-Row Horizontal Scroll or Grid of Supported Platforms
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SUPPORTED_PLATFORMS.forEach { platform ->
+                    ModernPlatformCard(
+                        platform = platform,
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                            val clipText = clipboard?.primaryClip?.let {
+                                if (it.itemCount > 0) it.getItemAt(0).text?.toString()?.trim() else null
+                            }
+                            val hasMatchingUrl = platform.domains.isNotEmpty() && !clipText.isNullOrEmpty() &&
+                                    platform.domains.any { clipText.contains(it, ignoreCase = true) }
+
+                            if (hasMatchingUrl) {
+                                viewModel.onUrlChange(clipText!!)
+                                viewModel.analyzeUrl()
+                                Toast.makeText(context, "Đã dán liên kết ${platform.name} từ bộ nhớ tạm!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                selectedPlatformForGuide = platform
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        // SECTION: BẠN CÓ THỂ TẢI NHỮNG GÌ? (Download Capabilities Bento Cards)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = Color(0xFFF59E0B),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Bạn có thể tải những gì?",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "VibeLoad hỗ trợ xử lý 3 nhóm định dạng chính 100% trên điện thoại:",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 3 Bento Capability Cards Carousel
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Card 1: Video sắc nét
+                CapabilityCard(
+                    icon = Icons.Default.Videocam,
+                    iconGradient = listOf(Color(0xFF2563EB), Color(0xFF38BDF8)),
+                    title = "Video Không Logo",
+                    subtitle = "4K • 1080p • 60fps",
+                    description = "Gỡ sạch logo & watermark TikTok, Reels, Shorts. Tự động ghép âm thanh hình ảnh chất lượng cao nhất.",
+                    badges = listOf("Không Watermark", "TikTok / Shorts / Reels", "360p - 4K UHD")
+                )
+
+                // Card 2: Âm thanh & MP3
+                CapabilityCard(
+                    icon = Icons.Default.MusicNote,
+                    iconGradient = listOf(Color(0xFFFF5500), Color(0xFFF59E0B)),
+                    title = "Âm Thanh & MP3 320k",
+                    subtitle = "SoundCloud • TikTok Sound",
+                    description = "Tải trực tiếp bài hát SoundCloud 320kbps, link Âm thanh gốc TikTok (/music/) hoặc tách MP3 từ video bất kỳ.",
+                    badges = listOf("SoundCloud 320kbps", "TikTok Âm thanh gốc", "Tách nhạc MP3")
+                )
+
+                // Card 3: Album ảnh đa tấm
+                CapabilityCard(
+                    icon = Icons.Default.PhotoLibrary,
+                    iconGradient = listOf(Color(0xFF8B5CF6), Color(0xFFEC4899)),
+                    title = "Album Ảnh Đa Tấm",
+                    subtitle = "TikTok Slide • Instagram",
+                    description = "Quét trọn bộ album ảnh TikTok và bài viết Instagram. Tùy chọn tick chọn từng ảnh (1, 3, 5...) hoặc tải tất cả.",
+                    badges = listOf("TikTok Slide", "Instagram Carousel", "Độ nét nguyên bản")
+                )
+            }
         }
 
         // Error message if any
@@ -334,8 +700,8 @@ fun HomeScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp),
-                    shape = RoundedCornerShape(14.dp),
+                        .padding(top = 18.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
@@ -394,7 +760,7 @@ fun HomeScreen(
                     // Preview Card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
@@ -403,8 +769,8 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(if (meta.isImageOnly) 240.dp else 180.dp)
-                                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                                    .height(if (meta.isImageOnly) 240.dp else 190.dp)
+                                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
                                     .background(Color.Black),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -576,7 +942,7 @@ fun HomeScreen(
                                         Card(
                                             modifier = Modifier
                                                 .width(86.dp)
-                                                .clickable {
+                                                .bounceClick {
                                                     viewModel.setPreviewImageIndex(idx)
                                                 },
                                             shape = RoundedCornerShape(12.dp),
@@ -645,13 +1011,13 @@ fun HomeScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
+                                    .bounceClick {
                                         val mp3Opt = meta.audioOptions.firstOrNull { !it.isOriginalAudio && it.bitrateKbps == 128 } ?: meta.audioOptions.firstOrNull()
                                         if (mp3Opt != null) {
                                             viewModel.selectFormat(mp3Opt)
                                         }
                                     },
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 border = BorderStroke(1.dp, if (isMusicSelected) AccentPurple else MaterialTheme.colorScheme.outlineVariant),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                             ) {
@@ -835,6 +1201,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Filter Pills: "Tất cả (count)", "Video", "Âm thanh", "Ảnh"
+        // Wrapped with horizontalScroll & defaultMinSize to guarantee NO SQUISHING on any screen ratio
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1008,7 +1375,7 @@ fun HomeScreen(
                         text = "Dán liên kết phía trên để bắt đầu tải xuống video, âm thanh hoặc ảnh",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -1032,6 +1399,46 @@ fun HomeScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    // Platform Guide Dialog
+    selectedPlatformForGuide?.let { platform ->
+        PlatformGuideDialog(
+            platform = platform,
+            onDismiss = { selectedPlatformForGuide = null },
+            onPasteFromClipboard = {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                val clipText = clipboard?.primaryClip?.let {
+                    if (it.itemCount > 0) it.getItemAt(0).text?.toString()?.trim() else null
+                }
+                if (!clipText.isNullOrEmpty()) {
+                    viewModel.onUrlChange(clipText)
+                    viewModel.analyzeUrl()
+                } else {
+                    Toast.makeText(context, "Bộ nhớ tạm đang trống!", Toast.LENGTH_SHORT).show()
+                }
+                selectedPlatformForGuide = null
+            },
+            onOpenPlatformApp = {
+                try {
+                    if (platform.appPackage != null) {
+                        val launchIntent = context.packageManager.getLaunchIntentForPackage(platform.appPackage)
+                        if (launchIntent != null) {
+                            context.startActivity(launchIntent)
+                        } else {
+                            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(platform.webFallback))
+                            context.startActivity(webIntent)
+                        }
+                    } else {
+                        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(platform.webFallback))
+                        context.startActivity(webIntent)
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Không thể mở ứng dụng: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                selectedPlatformForGuide = null
+            }
+        )
     }
 
     // Rename Dialog from Library
@@ -1099,42 +1506,275 @@ fun HomeScreen(
     }
 }
 
+/**
+ * Modern Platform Card with tactile bounce, authentic brand icon & capability badge.
+ */
 @Composable
-fun PlatformIcon(
-    label: String,
-    bgColor: Color,
-    icon: ImageVector,
-    iconTint: Color,
+fun ModernPlatformCard(
+    platform: SupportedPlatform,
     onClick: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }
+    Card(
+        modifier = Modifier
+            .width(135.dp)
+            .bounceClick { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
     ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(bgColor),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.Start
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = iconTint,
-                modifier = Modifier.size(24.dp)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(platform.brandColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = platform.iconResId),
+                    contentDescription = platform.name,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = platform.name,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            Text(
+                text = platform.badge,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
+}
+
+/**
+ * Capability Bento Card showcasing download features (Video, Audio, Album).
+ */
+@Composable
+fun CapabilityCard(
+    icon: ImageVector,
+    iconGradient: List<Color>,
+    title: String,
+    subtitle: String,
+    description: String,
+    badges: List<String>
+) {
+    Card(
+        modifier = Modifier.width(260.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Brush.linearGradient(iconGradient)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(
+                        text = title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = iconGradient.first()
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = description,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 17.sp,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Badges row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                badges.take(2).forEach { badge ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = badge,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Dialog guiding users on how to copy links from a specific platform & showing all supported media formats.
+ */
+@Composable
+fun PlatformGuideDialog(
+    platform: SupportedPlatform,
+    onDismiss: () -> Unit,
+    onPasteFromClipboard: () -> Unit,
+    onOpenPlatformApp: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(platform.brandColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = platform.iconResId),
+                        contentDescription = platform.name,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = platform.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Hướng dẫn tải & tính năng hỗ trợ",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Section: Supported Features
+                Text(
+                    text = "Định dạng hỗ trợ:",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                platform.supportedTypes.forEach { type ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(top = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = type,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = 17.sp
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Section: Quick 3-Step Guide
+                Text(
+                    text = "Cách tải nhanh:",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Text(
+                    text = platform.quickGuide,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 18.sp
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onPasteFromClipboard,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Dán từ bộ nhớ tạm")
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = onOpenPlatformApp) {
+                    Text(if (platform.appPackage != null) "Mở ứng dụng" else "Mở trang web")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Đóng")
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -1151,13 +1791,15 @@ fun FilterPill(
 
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .height(38.dp)
+            .defaultMinSize(minWidth = 92.dp)
+            .clip(RoundedCornerShape(19.dp))
             .then(
                 if (isSelected) Modifier.background(gradient) else Modifier.background(bgColor)
             )
-            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .border(1.dp, borderColor, RoundedCornerShape(19.dp))
+            .bounceClick { onClick() }
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -1248,52 +1890,28 @@ fun VibeMediaCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else if (item.isImage) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(Color(0xFF0D9488), Color(0xFF0284C7), Color(0xFF2563EB))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Image,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    } else if (!item.isAudio) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
+                            imageVector = Icons.Default.Image,
                             contentDescription = null,
-                            tint = Color(0xFF38BDF8),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    } else if (item.isAudio) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = AccentPurple,
                             modifier = Modifier.size(32.dp)
                         )
                     } else {
-                        // Audio purple-to-blue gradient cover
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFF06B6D4))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.PlayCircleOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
                     }
 
-                    // Duration Badge (bottom right)
                     if (durationString.isNotEmpty()) {
                         Box(
                             modifier = Modifier
@@ -1422,7 +2040,7 @@ fun VibeMediaCard(
                         .height(34.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                        .clickable { onPlay() },
+                        .bounceClick { onPlay() },
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1449,7 +2067,7 @@ fun VibeMediaCard(
                         .height(34.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { onOpenFolder() },
+                        .bounceClick { onOpenFolder() },
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1476,7 +2094,7 @@ fun VibeMediaCard(
                         .height(34.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f))
-                        .clickable { onDelete() },
+                        .bounceClick { onDelete() },
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1515,7 +2133,7 @@ fun FormatChip(
             .clip(RoundedCornerShape(12.dp))
             .background(bgColor)
             .border(1.dp, borderColor, RoundedCornerShape(12.dp))
-            .clickable { onClick() }
+            .bounceClick { onClick() }
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Column {
@@ -1533,19 +2151,5 @@ fun FormatChip(
                 )
             }
         }
-    }
-}
-
-private fun handlePlatformClick(domain: String, viewModel: HomeViewModel, context: Context) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-    val clipText = clipboard?.primaryClip?.let {
-        if (it.itemCount > 0) it.getItemAt(0).text?.toString()?.trim() else null
-    }
-
-    if (!clipText.isNullOrEmpty() && clipText.contains(domain, ignoreCase = true)) {
-        viewModel.onUrlChange(clipText)
-        viewModel.analyzeUrl()
-    } else {
-        Toast.makeText(context, "Dán liên kết từ $domain vào ô nhập để tải", Toast.LENGTH_SHORT).show()
     }
 }

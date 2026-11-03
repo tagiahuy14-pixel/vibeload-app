@@ -1,8 +1,8 @@
 {
-  "versionCode": 11,
-  "versionName": "1.0.10",
-  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.10/app-release.apk",
-  "sha256": "C953972F24B5D0066A1EA25BB431EC3FD366900F7D8BD771C03DC7B010AC389E",
+  "versionCode": 13,
+  "versionName": "1.0.12",
+  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.12/app-release.apk",
+  "sha256": "241F1D13446C068C3DBC658DB1645B4BD0462C43B7B468CF39F257E0FFC6C381",
   "mandatory": false,
-  "releaseNotes": "Tối ưu độ tương phản và sửa lỗi hiển thị chữ trong Hộp thoại Cập nhật (hỗ trợ hoàn hảo Chế độ sáng/tối). Nhận diện thông minh và hướng dẫn trích xuất âm thanh MP3 từ liên kết TikTok Sound/Music."
+  "releaseNotes": "Tái thiết kế giao diện hiện đại & trực quan theo chuẩn animate-ui & antigravity-skills: Bổ sung khu vực Nền tảng hỗ trợ (TikTok, YouTube, SoundCloud, Instagram, Facebook, X, Threads, 100+ Khác) kèm danh sách định dạng hỗ trợ chi tiết; 3 thẻ tính năng tải nổi bật (Video sạch logo, Âm thanh MP3 320k, Album ảnh đa tấm); Vi tương tác đàn hồi xúc giác (Spring physics press effect); Khắc phục triệt để lỗi co giãn viên thuốc lọc thư viện trên mọi kích thước màn hình."
 }

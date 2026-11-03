@@ -201,19 +201,25 @@ def main():
 ### SHA-256 Checksum:
 `{sha256}`
 
-### Tính năng & Sửa lỗi nổi bật:
-- 🎵 **Hỗ trợ Tải trực tiếp Âm thanh Gốc TikTok (TikTok Original Sound / Music)**:
-  - Cho phép dán trực tiếp liên kết Trang Âm thanh / Đĩa nhạc (`https://vt.tiktok.com/...` hoặc `https://www.tiktok.com/music/...`) để tải ngay bản nhạc nền gốc nguyên bản dưới định dạng file MP3 chất lượng cao.
-  - Tự động trích xuất đầy đủ ảnh đại diện/bìa đĩa nhạc, tên bài hát, tên nghệ sĩ sáng tác và thời lượng chính xác của bài nhạc.
-  - Phân biệt hoàn hảo giữa *Tải âm thanh gốc của bài hát* và *Trích xuất âm thanh từ video*, đáp ứng trọn vẹn nhu cầu lưu trữ nhạc TikTok chất lượng cao của người dùng.
-- 🎨 **Tối ưu độ tương phản & Sửa lỗi hiển thị Hộp thoại Cập nhật (OTA Update Dialog)**:
-  - Khắc phục triệt để lỗi màu chữ trắng/xám bạc bị chìm trên nền trắng khi thiết bị ở Chế độ sáng (Light Theme).
-  - Chuyển đổi toàn bộ sang Material 3 Theme Tokens: Tiêu đề rõ nét, phiên bản mới màu Primary nổi bật, hộp thông tin ghi chú bo cong hiện đại và dễ đọc trên cả 2 chế độ Sáng và Tối.
-- ⚡ **Cơ chế cập nhật OTA đa tầng (Multi-tier CDN Fallback)**:
-  - Chống chặn giới hạn HTTP 403 Rate Limit trên mạng di động 4G/5G với cơ chế dự phòng 3 lớp (GitHub API -> Web 302 Redirect -> jsDelivr CDN manifest).
-- 🚀 **Biểu tượng Logo mới & Giao diện thích ứng siêu mượt**:
-  - Hỗ trợ Adaptive Icons toàn diện trên Xiaomi HyperOS, Samsung OneUI, ColorOS, OriginOS.
-  - Thanh điều hướng và bộ lọc media thích ứng hoàn hảo trên mọi tỷ lệ màn hình.
+### Tính năng & Cải tiến nổi bật:
+- 🎨 **Tái thiết kế Giao diện Hiện đại & Trực quan (chuẩn animate-ui & antigravity-skills)**:
+  - **Nền tảng hỗ trợ nổi bật**: Hiển thị trực quan 8 thương hiệu lớn: **TikTok**, **YouTube**, **SoundCloud**, **Instagram**, **Facebook**, **X (Twitter)**, **Threads**, và **100+ Khác**.
+  - **Minh bạch tính năng & định dạng tải**: Từng thẻ nền tảng hiển thị rõ ràng những nội dung tải được:
+    - *TikTok*: Video sạch logo • Âm thanh gốc • Album ảnh
+    - *YouTube*: Video 4K UHD • Shorts • Tách MP3
+    - *SoundCloud*: Nhạc MP3 320kbps chất lượng cao • Podcast & Remix
+    - *Instagram*: Reels Full HD • Album ảnh (Carousel) • Story
+    - *Facebook*: Video HD • Watch • Reels
+    - *X (Twitter)*: Video Full HD • GIF • Hình ảnh
+    - *Threads*: Video & Hình ảnh bài đăng
+    - *100+ Khác*: Bilibili, Douyin, Reddit, Pinterest...
+  - **Tương tác thông minh**: Chạm vào từng nền tảng sẽ tự động dán và phân tích ngay nếu có liên kết trong bộ nhớ tạm; nếu chưa có sẽ mở Hộp thoại hướng dẫn chi tiết 3 bước kèm nút mở nhanh ứng dụng.
+  - **3 Thẻ Bento Khả năng Tải**: Giới thiệu rõ nét 3 nhóm định dạng cốt lõi: *🎬 Video Không Logo*, *🎵 Âm Thanh & MP3 320k*, *📸 Album Ảnh Đa Tấm*.
+- 💫 **Vi tương tác Phản hồi Xúc giác Đàn hồi (Spring Physics Press Effect)**:
+  - Tích hợp hiệu ứng đàn hồi nảy êm ái (`Modifier.bounceClick` với spring damping ~0.95) trên toàn bộ nút bấm, thẻ nền tảng, tab lọc và card media.
+- 📱 **Tối ưu hiển thị đa kích thước màn hình**:
+  - Khắc phục triệt để lỗi co giãn viên thuốc lọc thư viện (*Tất cả, Video, Âm thanh, Ảnh*) trên mọi tỷ lệ màn hình điện thoại (Xiaomi 15/17/18, Samsung Galaxy S25/S26 Ultra, Oppo ColorOS, Vivo OriginOS).
+- ⚡ **100% On-Device & Bảo mật**: Toàn bộ quy trình phân tích và tải media diễn ra trực tiếp trên thiết bị, không lưu trữ qua máy chủ trung gian.
 """
 
     if status_code == 200 and isinstance(release_data, dict) and "id" in release_data:
@@ -320,7 +326,7 @@ def main():
                 "downloadUrl": f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/{tag_name}/app-release.apk",
                 "sha256": sha256,
                 "mandatory": False,
-                "releaseNotes": f"Hỗ trợ tải trực tiếp Âm thanh Gốc TikTok (Sound/Music) từ liên kết trang đĩa nhạc dưới dạng file MP3 chất lượng cao. Khắc phục triệt để lỗi độ tương phản và màu chữ trong Hộp thoại Cập nhật ở Chế độ sáng."
+                "releaseNotes": f"Tái thiết kế giao diện hiện đại & trực quan theo chuẩn animate-ui & antigravity-skills: Bổ sung khu vực Nền tảng hỗ trợ (TikTok, YouTube, SoundCloud, Instagram, Facebook, X, Threads, 100+ Khác) kèm danh sách định dạng hỗ trợ chi tiết; 3 thẻ tính năng tải nổi bật (Video sạch logo, Âm thanh MP3 320k, Album ảnh đa tấm); Vi tương tác đàn hồi xúc giác (Spring physics press effect); Khắc phục triệt để lỗi co giãn viên thuốc lọc thư viện trên mọi kích thước màn hình."
             }
             with open(version_json_path, "w", encoding="utf-8") as f:
                 json.dump(version_manifest, f, ensure_ascii=False, indent=2)

@@ -67,3 +67,12 @@ Thumbs.db
 # Secrets & GitHub Tokens
 .github_token
 *.token
+
+.vercel
+.env*
+
+storage/
+web/backend/storage/
+.pytest_cache/
+
+web/

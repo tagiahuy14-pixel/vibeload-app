@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Bar 1 -->
+    <path
+        android:fillColor="#FF5500"
+        android:pathData="M1.2,14.5c-0.4,0 -0.7,0.3 -0.7,0.7v2c0,0.4 0.3,0.7 0.7,0.7s0.7,-0.3 0.7,-0.7v-2c0,-0.4 -0.3,-0.7 -0.7,-0.7z"/>
+    <!-- Bar 2 -->
+    <path
+        android:fillColor="#FF5500"
+        android:pathData="M3.2,13c-0.4,0 -0.7,0.3 -0.7,0.7v3.6c0,0.4 0.3,0.7 0.7,0.7s0.7,-0.3 0.7,-0.7v-3.6c0,-0.4 -0.3,-0.7 -0.7,-0.7z"/>
+    <!-- Bar 3 -->
+    <path
+        android:fillColor="#FF5500"
+        android:pathData="M5.2,11.5c-0.4,0 -0.7,0.3 -0.7,0.7v5.1c0,0.4 0.3,0.7 0.7,0.7s0.7,-0.3 0.7,-0.7v-5.1c0,-0.4 -0.3,-0.7 -0.7,-0.7z"/>
+    <!-- Bar 4 -->
+    <path
+        android:fillColor="#FF5500"
+        android:pathData="M7.2,10.2c-0.4,0 -0.7,0.3 -0.7,0.7v6.4c0,0.4 0.3,0.7 0.7,0.7s0.7,-0.3 0.7,-0.7v-6.4c0,-0.4 -0.3,-0.7 -0.7,-0.7z"/>
+    <!-- Cloud shape & right side -->
+    <path
+        android:fillColor="#FF5500"
+        android:pathData="M18.8,11.2c-0.4,0 -0.7,0.1 -1,0.2 -0.6,-2.3 -2.7,-4 -5.1,-4 -1.4,0 -2.6,0.5 -3.5,1.4v8.5c0.6,0.4 1.3,0.7 2.1,0.7h7.5c2.3,0 4.2,-1.9 4.2,-4.2s-1.9,-4.2 -4.2,-4.2zM9.2,9.5v8.5h0.4V9.5z"/>
+</vector>
