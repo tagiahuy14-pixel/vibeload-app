@@ -13,6 +13,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,9 +24,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
@@ -44,9 +49,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -106,8 +114,6 @@ data class SupportedPlatform(
     val containerBgColor: Color,
     val badge: String,
     val domains: List<String>,
-    val appPackage: String?,
-    val webFallback: String,
     val supportedTypes: List<String>,
     val quickGuide: String
 )
@@ -120,8 +126,6 @@ val SUPPORTED_PLATFORMS = listOf(
         containerBgColor = Color(0xFF0F172A), // Deep Dark Slate container for authentic TikTok 3D note contrast
         badge = "Video • MP3 • Ảnh",
         domains = listOf("tiktok.com", "douyin.com"),
-        appPackage = "com.zhiliaoapp.musically",
-        webFallback = "https://www.tiktok.com",
         supportedTypes = listOf(
             "🎬 Video Full HD 100% sạch logo watermark",
             "🎵 Tải trực tiếp link Âm thanh gốc (/music/)",
@@ -136,8 +140,6 @@ val SUPPORTED_PLATFORMS = listOf(
         containerBgColor = Color(0xFFFEE2E2), // Soft Rose background for red play icon
         badge = "4K • Shorts • MP3",
         domains = listOf("youtube.com", "youtu.be"),
-        appPackage = "com.google.android.youtube",
-        webFallback = "https://www.youtube.com",
         supportedTypes = listOf(
             "🎬 Video 4K UHD, 2K, 1080p 60fps sắc nét",
             "⚡ Video ngắn YouTube Shorts chất lượng gốc",
@@ -152,8 +154,6 @@ val SUPPORTED_PLATFORMS = listOf(
         containerBgColor = Color(0xFFFFEDD5), // Soft Orange background for orange SoundCloud icon
         badge = "Nhạc MP3 320k",
         domains = listOf("soundcloud.com"),
-        appPackage = "com.soundcloud.android",
-        webFallback = "https://soundcloud.com",
         supportedTypes = listOf(
             "🎵 Tải bài hát MP3 chất lượng cao lên đến 320kbps",
             "🎧 Bản phối độc quyền, remix, DJ set & Podcast",
@@ -168,8 +168,6 @@ val SUPPORTED_PLATFORMS = listOf(
         containerBgColor = Color(0xFFFCE7F3), // Soft Pink background for Instagram icon
         badge = "Reels • Ảnh • Story",
         domains = listOf("instagram.com"),
-        appPackage = "com.instagram.android",
-        webFallback = "https://www.instagram.com",
         supportedTypes = listOf(
             "⚡ Instagram Reels Full HD không mờ",
             "📸 Bài viết ảnh đơn & Album ảnh (Carousel)",
@@ -184,8 +182,6 @@ val SUPPORTED_PLATFORMS = listOf(
         containerBgColor = Color(0xFFDBEAFE), // Soft Blue background for Facebook icon
         badge = "Video HD • Reels",
         domains = listOf("facebook.com", "fb.watch"),
-        appPackage = "com.facebook.katana",
-        webFallback = "https://www.facebook.com",
         supportedTypes = listOf(
             "🎬 Video HD & 1080p từ Bảng tin & Watch",
             "⚡ Facebook Reels độ phân giải cao",
@@ -200,8 +196,6 @@ val SUPPORTED_PLATFORMS = listOf(
         containerBgColor = Color(0xFF0F1419), // Deep Dark background for White X
         badge = "Video • GIF • Ảnh",
         domains = listOf("x.com", "twitter.com"),
-        appPackage = "com.twitter.android",
-        webFallback = "https://x.com",
         supportedTypes = listOf(
             "🎬 Video bài đăng chất lượng gốc 1080p",
             "🎞️ Ảnh động GIF không bị vỡ hạt",
@@ -216,8 +210,6 @@ val SUPPORTED_PLATFORMS = listOf(
         containerBgColor = Color(0xFF18181B), // Deep Dark background for White Threads @
         badge = "Video • Media",
         domains = listOf("threads.net"),
-        appPackage = "com.instagram.barcelona",
-        webFallback = "https://www.threads.net",
         supportedTypes = listOf(
             "🎬 Video chia sẻ trên Threads",
             "📸 Hình ảnh bài đăng chất lượng sắc nét"
@@ -231,8 +223,6 @@ val SUPPORTED_PLATFORMS = listOf(
         containerBgColor = Color(0xFFEDE9FE), // Soft Purple background for 100+ icon
         badge = "yt-dlp Core",
         domains = emptyList(),
-        appPackage = null,
-        webFallback = "https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md",
         supportedTypes = listOf(
             "🌐 Bilibili, Douyin, Kuaishou, Pinterest",
             "📺 Reddit, Vimeo, Twitch, Dailymotion",
@@ -242,7 +232,7 @@ val SUPPORTED_PLATFORMS = listOf(
     )
 )
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
@@ -257,8 +247,43 @@ fun HomeScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val errorRequester = remember { BringIntoViewRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var selectedPlatformForGuide by remember { mutableStateOf<SupportedPlatform?>(null) }
+
+    // Dismiss keyboard when analysis starts
+    LaunchedEffect(uiState.isAnalyzing) {
+        if (uiState.isAnalyzing) {
+            keyboardController?.hide()
+            focusManager.clearFocus()
+        }
+    }
+
+    // Auto-scroll down to options when analysis succeeds
+    LaunchedEffect(uiState.metadata) {
+        if (uiState.metadata != null) {
+            keyboardController?.hide()
+            focusManager.clearFocus()
+            kotlinx.coroutines.delay(250)
+            bringIntoViewRequester.bringIntoView()
+            kotlinx.coroutines.delay(200)
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+
+    // Auto-scroll to error message if any
+    LaunchedEffect(uiState.errorMessage) {
+        if (uiState.errorMessage != null) {
+            keyboardController?.hide()
+            focusManager.clearFocus()
+            kotlinx.coroutines.delay(200)
+            errorRequester.bringIntoView()
+        }
+    }
 
     // Check clipboard for smart banner
     var clipboardCandidateUrl by remember { mutableStateOf<String?>(null) }
@@ -401,6 +426,8 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
                     .bounceClick {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
                         viewModel.onUrlChange(url)
                         viewModel.analyzeUrl()
                         clipboardCandidateUrl = null
@@ -477,6 +504,18 @@ fun HomeScreen(
                             fontSize = 14.sp
                         )
                     },
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                            if (uiState.urlInput.isNotBlank()) {
+                                viewModel.analyzeUrl()
+                            }
+                        }
+                    ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -525,6 +564,8 @@ fun HomeScreen(
                 .clip(RoundedCornerShape(16.dp))
                 .background(gradientPrimary)
                 .bounceClick(enabled = !uiState.isAnalyzing && uiState.urlInput.isNotBlank()) {
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
                     viewModel.analyzeUrl()
                 },
             contentAlignment = Alignment.Center
@@ -623,6 +664,8 @@ fun HomeScreen(
                                     platform.domains.any { clipText.contains(it, ignoreCase = true) }
 
                             if (hasMatchingUrl) {
+                                keyboardController?.hide()
+                                focusManager.clearFocus()
                                 viewModel.onUrlChange(clipText!!)
                                 viewModel.analyzeUrl()
                                 Toast.makeText(context, "Đã dán liên kết ${platform.name} từ bộ nhớ tạm!", Toast.LENGTH_SHORT).show()
@@ -666,7 +709,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 3 Bento Capability Cards Carousel
+            // 3 Bento Capability Cards Carousel (Uniform, Synchronized Dimensions)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -678,9 +721,9 @@ fun HomeScreen(
                     icon = Icons.Default.Videocam,
                     iconGradient = listOf(Color(0xFF2563EB), Color(0xFF38BDF8)),
                     title = "Video Không Logo",
-                    subtitle = "4K • 1080p • 60fps",
-                    description = "Gỡ sạch logo & watermark TikTok, Reels, Shorts. Tự động ghép âm thanh hình ảnh chất lượng cao nhất.",
-                    badges = listOf("Không Watermark", "TikTok / Shorts / Reels", "360p - 4K UHD")
+                    subtitle = "TikTok • Reels • Shorts",
+                    description = "Tải video sạch logo watermark. Tự động ghép âm thanh và hình ảnh độ phân giải cao nhất.",
+                    badges = listOf("Không Watermark", "360p - 4K UHD")
                 )
 
                 // Card 2: Âm thanh & MP3
@@ -688,9 +731,9 @@ fun HomeScreen(
                     icon = Icons.Default.MusicNote,
                     iconGradient = listOf(Color(0xFFFF5500), Color(0xFFF59E0B)),
                     title = "Âm Thanh & MP3 320k",
-                    subtitle = "SoundCloud • TikTok Sound",
-                    description = "Tải trực tiếp bài hát SoundCloud 320kbps, link Âm thanh gốc TikTok (/music/) hoặc tách MP3 từ video bất kỳ.",
-                    badges = listOf("SoundCloud 320kbps", "TikTok Âm thanh gốc", "Tách nhạc MP3")
+                    subtitle = "SoundCloud • TikTok Music",
+                    description = "Tải trực tiếp nhạc SoundCloud 320kbps, liên kết âm thanh gốc TikTok hoặc tách MP3 từ video.",
+                    badges = listOf("SoundCloud 320k", "TikTok Gốc & MP3")
                 )
 
                 // Card 3: Album ảnh đa tấm
@@ -699,8 +742,8 @@ fun HomeScreen(
                     iconGradient = listOf(Color(0xFF8B5CF6), Color(0xFFEC4899)),
                     title = "Album Ảnh Đa Tấm",
                     subtitle = "TikTok Slide • Instagram",
-                    description = "Quét trọn bộ album ảnh TikTok và bài viết Instagram. Tùy chọn tick chọn từng ảnh (1, 3, 5...) hoặc tải tất cả.",
-                    badges = listOf("TikTok Slide", "Instagram Carousel", "Độ nét nguyên bản")
+                    description = "Quét trọn bộ album ảnh TikTok và bài viết Instagram. Tùy chọn tick tải từng ảnh hoặc tất cả.",
+                    badges = listOf("TikTok Slide", "Instagram Album")
                 )
             }
         }
@@ -711,7 +754,8 @@ fun HomeScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 18.dp),
+                        .padding(top = 18.dp)
+                        .bringIntoViewRequester(errorRequester),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
@@ -756,7 +800,8 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 20.dp),
+                        .padding(top = 20.dp)
+                        .bringIntoViewRequester(bringIntoViewRequester),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     val realImages = meta.imageOptions.filter { it.formatId != "ALL_IMAGES" }
@@ -1423,29 +1468,12 @@ fun HomeScreen(
                     if (it.itemCount > 0) it.getItemAt(0).text?.toString()?.trim() else null
                 }
                 if (!clipText.isNullOrEmpty()) {
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
                     viewModel.onUrlChange(clipText)
                     viewModel.analyzeUrl()
                 } else {
                     Toast.makeText(context, "Bộ nhớ tạm đang trống!", Toast.LENGTH_SHORT).show()
-                }
-                selectedPlatformForGuide = null
-            },
-            onOpenPlatformApp = {
-                try {
-                    if (platform.appPackage != null) {
-                        val launchIntent = context.packageManager.getLaunchIntentForPackage(platform.appPackage)
-                        if (launchIntent != null) {
-                            context.startActivity(launchIntent)
-                        } else {
-                            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(platform.webFallback))
-                            context.startActivity(webIntent)
-                        }
-                    } else {
-                        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(platform.webFallback))
-                        context.startActivity(webIntent)
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Không thể mở ứng dụng: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
                 selectedPlatformForGuide = null
             }
@@ -1578,6 +1606,7 @@ fun ModernPlatformCard(
 
 /**
  * Capability Bento Card showcasing download features (Video, Audio, Album).
+ * Synchronized with uniform dimensions, balanced typography, and bottom-pinned badges.
  */
 @Composable
 fun CapabilityCard(
@@ -1589,16 +1618,27 @@ fun CapabilityCard(
     badges: List<String>
 ) {
     Card(
-        modifier = Modifier.width(260.dp),
+        modifier = Modifier
+            .width(272.dp)
+            .height(178.dp),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Header Row: Icon + Title & Subtitle
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(42.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Brush.linearGradient(iconGradient)),
                     contentAlignment = Alignment.Center
@@ -1613,36 +1653,38 @@ fun CapabilityCard(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = subtitle,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = iconGradient.first()
+                        color = iconGradient.first(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
+            // Description Body
             Text(
                 text = description,
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 17.sp,
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Badges row
+            // Badges Row (pinned at bottom)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1652,13 +1694,14 @@ fun CapabilityCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = badge,
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
                         )
                     }
                 }
@@ -1674,8 +1717,7 @@ fun CapabilityCard(
 fun PlatformGuideDialog(
     platform: SupportedPlatform,
     onDismiss: () -> Unit,
-    onPasteFromClipboard: () -> Unit,
-    onOpenPlatformApp: () -> Unit
+    onPasteFromClipboard: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1775,13 +1817,8 @@ fun PlatformGuideDialog(
             }
         },
         dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = onOpenPlatformApp) {
-                    Text(if (platform.appPackage != null) "Mở ứng dụng" else "Mở trang web")
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Đóng")
-                }
+            TextButton(onClick = onDismiss) {
+                Text("Đóng")
             }
         }
     )
