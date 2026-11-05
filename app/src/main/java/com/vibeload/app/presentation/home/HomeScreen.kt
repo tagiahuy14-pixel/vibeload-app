@@ -20,6 +20,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -51,6 +52,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +67,7 @@ import com.vibeload.app.R
 import com.vibeload.app.data.local.entity.HistoryEntity
 import com.vibeload.app.data.local.entity.isImage
 import com.vibeload.app.domain.model.FormatOption
+import com.vibeload.app.presentation.common.VibeHaptic
 import com.vibeload.app.presentation.library.LibrarySortOrder
 import com.vibeload.app.presentation.library.LibraryViewModel
 import com.vibeload.app.presentation.theme.AccentPurple
@@ -122,8 +125,8 @@ val SUPPORTED_PLATFORMS = listOf(
     SupportedPlatform(
         name = "TikTok",
         iconResId = R.drawable.ic_platform_tiktok,
-        brandColor = Color(0xFF25F4EE),
-        containerBgColor = Color(0xFF0F172A), // Deep Dark Slate container for authentic TikTok 3D note contrast
+        brandColor = Color(0xFF000000),
+        containerBgColor = Color(0xFF000000), // Solid True Black box for high-contrast TikTok 3D icon
         badge = "Video • MP3 • Ảnh",
         domains = listOf("tiktok.com", "douyin.com"),
         supportedTypes = listOf(
@@ -268,10 +271,10 @@ fun HomeScreen(
         if (uiState.metadata != null) {
             keyboardController?.hide()
             focusManager.clearFocus()
-            kotlinx.coroutines.delay(250)
-            bringIntoViewRequester.bringIntoView()
+            kotlinx.coroutines.delay(300)
+            scrollState.animateScrollTo(scrollState.maxValue)
             kotlinx.coroutines.delay(200)
-            bringIntoViewRequester.bringIntoView()
+            scrollState.animateScrollTo(scrollState.maxValue)
         }
     }
 
@@ -556,51 +559,109 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Big Action Button: "Phân tích liên kết" with spring tactile bounce
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(gradientPrimary)
-                .bounceClick(enabled = !uiState.isAnalyzing && uiState.urlInput.isNotBlank()) {
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
-                    viewModel.analyzeUrl()
-                },
-            contentAlignment = Alignment.Center
+        val view = LocalView.current
+        val gradientQuick = remember {
+            Brush.horizontalGradient(
+                colors = listOf(Color(0xFFF59E0B), Color(0xFFEA580C))
+            )
+        }
+
+        // Action Buttons: "Phân tích" & "⚡ Tải nhanh (Bản nét nhất)"
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+            // Button 1: "Phân tích"
+            Box(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(gradientPrimary)
+                    .bounceClick(enabled = !uiState.isAnalyzing && uiState.urlInput.isNotBlank()) {
+                        VibeHaptic.click(view)
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                        viewModel.analyzeUrl()
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                if (uiState.isAnalyzing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Đang phân tích liên kết...",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (uiState.isAnalyzing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Đang xử lý...",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Phân tích",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+
+            // Button 2: "⚡ Tải nhanh" (One-Tap Best Quality)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(gradientQuick)
+                    .bounceClick(enabled = !uiState.isAnalyzing && uiState.urlInput.isNotBlank()) {
+                        VibeHaptic.success(view)
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                        viewModel.quickDownloadBestQuality(onNavigateToDownloading)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     Icon(
-                        imageVector = Icons.Default.FileDownload,
+                        imageVector = Icons.Default.Bolt,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Phân tích liên kết",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Text(
+                            text = "Tải nhanh",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            lineHeight = 15.sp
+                        )
+                        Text(
+                            text = "Bản nét nhất",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 10.sp,
+                            lineHeight = 12.sp
+                        )
+                    }
                 }
             }
         }
@@ -1155,7 +1216,11 @@ fun HomeScreen(
                                         FormatChip(
                                             option = opt,
                                             isSelected = uiState.selectedFormat == opt,
-                                            onClick = { viewModel.selectFormat(opt) }
+                                            durationSeconds = meta.durationSeconds,
+                                            onClick = {
+                                                VibeHaptic.tab(view)
+                                                viewModel.selectFormat(opt)
+                                            }
                                         )
                                     }
                                 }
@@ -1164,7 +1229,11 @@ fun HomeScreen(
                                         FormatChip(
                                             option = opt,
                                             isSelected = uiState.selectedFormat == opt,
-                                            onClick = { viewModel.selectFormat(opt) }
+                                            durationSeconds = meta.durationSeconds,
+                                            onClick = {
+                                                VibeHaptic.tab(view)
+                                                viewModel.selectFormat(opt)
+                                            }
                                         )
                                     }
                                 }
@@ -1173,7 +1242,11 @@ fun HomeScreen(
                                         FormatChip(
                                             option = opt,
                                             isSelected = uiState.selectedFormat == opt,
-                                            onClick = { viewModel.selectFormat(opt) }
+                                            durationSeconds = meta.durationSeconds,
+                                            onClick = {
+                                                VibeHaptic.tab(view)
+                                                viewModel.selectFormat(opt)
+                                            }
                                         )
                                     }
                                 }
@@ -1619,8 +1692,8 @@ fun CapabilityCard(
 ) {
     Card(
         modifier = Modifier
-            .width(272.dp)
-            .height(178.dp),
+            .width(280.dp)
+            .height(188.dp),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
@@ -1674,20 +1747,24 @@ fun CapabilityCard(
                 }
             }
 
-            // Description Body
+            // Description Body (Guaranteed 2 lines of identical height)
             Text(
                 text = description,
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 17.sp,
+                minLines = 2,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Badges Row (pinned at bottom)
+            // Badges Row (Uniform pinned bottom row)
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(26.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 badges.take(2).forEach { badge ->
                     Box(
@@ -1832,14 +1909,15 @@ fun FilterPill(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
     val selectedBgColor = MaterialTheme.colorScheme.primary
-    val unselectedBgColor = MaterialTheme.colorScheme.surface
-    val selectedContentColor = MaterialTheme.colorScheme.onPrimary // Pure solid White
-    val unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val unselectedBgColor = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+    val selectedContentColor = Color.White
+    val unselectedContentColor = if (isDark) Color(0xFF94A3B8) else Color(0xFF334155)
 
     val targetBgColor = if (isSelected) selectedBgColor else unselectedBgColor
     val targetContentColor = if (isSelected) selectedContentColor else unselectedContentColor
-    val targetBorderColor = if (isSelected) selectedBgColor else MaterialTheme.colorScheme.outlineVariant
+    val targetBorderColor = if (isSelected) selectedBgColor else if (isDark) Color(0xFF334155) else Color(0xFFCBD5E1)
 
     val animBgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(200), label = "pillBg")
     val animContentColor by animateColorAsState(targetValue = targetContentColor, animationSpec = tween(200), label = "pillContent")
@@ -2176,6 +2254,7 @@ fun VibeMediaCard(
 fun FormatChip(
     option: FormatOption,
     isSelected: Boolean,
+    durationSeconds: Long = 0L,
     onClick: () -> Unit
 ) {
     val bgColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
@@ -2197,11 +2276,16 @@ fun FormatChip(
                 color = textColor,
                 fontSize = 14.sp
             )
-            if (option.filesize > 0) {
+            val sizeText = if (option.filesize > 0L) {
+                option.getFormattedSize()
+            } else {
+                option.getEstimatedSize(durationSeconds)
+            }
+            if (sizeText.isNotEmpty()) {
                 Text(
-                    text = option.getFormattedSize(),
+                    text = sizeText,
                     fontSize = 11.sp,
-                    color = textColor.copy(alpha = 0.7f)
+                    color = textColor.copy(alpha = 0.75f)
                 )
             }
         }

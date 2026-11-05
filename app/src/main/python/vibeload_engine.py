@@ -539,13 +539,29 @@ def extract_tiktok_music_track(url, clean_url=""):
                                 "duration": duration,
                                 "platform": "tiktok",
                                 "video_options": [],
-                                "audio_options": [{
-                                    "format_id": audio_stream_url,
-                                    "ext": "mp3",
-                                    "abr": 128,
-                                    "filesize": 0,
-                                    "acodec": "mp3"
-                                }],
+                                "audio_options": [
+                                    {
+                                        "format_id": audio_stream_url,
+                                        "ext": "mp3",
+                                        "abr": 320,
+                                        "filesize": 0,
+                                        "acodec": "mp3"
+                                    },
+                                    {
+                                        "format_id": audio_stream_url,
+                                        "ext": "mp3",
+                                        "abr": 128,
+                                        "filesize": 0,
+                                        "acodec": "mp3"
+                                    },
+                                    {
+                                        "format_id": audio_stream_url,
+                                        "ext": "m4a",
+                                        "abr": 256,
+                                        "filesize": 0,
+                                        "acodec": "aac"
+                                    }
+                                ],
                                 "image_options": [],
                                 "is_image_only": False,
                                 "is_audio_only": True

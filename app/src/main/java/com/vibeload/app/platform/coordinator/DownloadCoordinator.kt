@@ -19,12 +19,25 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
+
+data class DownloadCompletedEvent(
+    val title: String,
+    val filePath: String,
+    val fileName: String,
+    val mimeType: String,
+    val isAudio: Boolean,
+    val fileSizeFormatted: String,
+    val historyEntity: HistoryEntity
+)
 
 class DownloadCoordinator(
     private val context: Context,
@@ -38,6 +51,9 @@ class DownloadCoordinator(
 
     private val _currentTask = MutableStateFlow<DownloadTask?>(null)
     val currentTask: StateFlow<DownloadTask?> = _currentTask.asStateFlow()
+
+    private val _completedEvent = MutableSharedFlow<DownloadCompletedEvent>(extraBufferCapacity = 1)
+    val completedEvent: SharedFlow<DownloadCompletedEvent> = _completedEvent.asSharedFlow()
 
     @Volatile
     private var isCancelled = false
@@ -597,7 +613,26 @@ class DownloadCoordinator(
                     progress = 100f
                 )
 
-                DownloadForegroundService.notifyComplete(context, task.title, true)
+                val fileSizeFormatted = FormatOption(formatId = "", label = "", filesize = finalFileSize).getFormattedSize()
+                DownloadForegroundService.notifyComplete(
+                    context = context,
+                    title = task.title,
+                    isSuccess = true,
+                    filePath = finalFileToPublish.absolutePath,
+                    mimeType = mimeType,
+                    fileSizeFormatted = fileSizeFormatted
+                )
+                _completedEvent.tryEmit(
+                    DownloadCompletedEvent(
+                        title = task.title,
+                        filePath = publishedUri.toString(),
+                        fileName = task.outputFilename,
+                        mimeType = mimeType,
+                        isAudio = !task.selectedFormat.isVideo && !task.selectedFormat.isImage,
+                        fileSizeFormatted = fileSizeFormatted,
+                        historyEntity = historyEntity
+                    )
+                )
                 break // Success! Exit retry loop.
 
             } catch (e: Exception) {

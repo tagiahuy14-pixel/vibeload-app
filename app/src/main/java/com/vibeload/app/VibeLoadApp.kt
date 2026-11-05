@@ -48,7 +48,10 @@ class VibeLoadApp : Application(), ImageLoaderFactory {
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            // Channel 1: Ongoing Download Progress (Silent, Low Importance)
+            val downloadChannel = NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
                 getString(R.string.notif_channel_name),
                 NotificationManager.IMPORTANCE_LOW
@@ -56,13 +59,26 @@ class VibeLoadApp : Application(), ImageLoaderFactory {
                 description = getString(R.string.notif_channel_desc)
                 setShowBadge(false)
             }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+            manager.createNotificationChannel(downloadChannel)
+
+            // Channel 2: Download Complete (High Importance, Sound, Vibration, Heads-up banner)
+            val completeChannel = NotificationChannel(
+                NOTIFICATION_CHANNEL_COMPLETE_ID,
+                "Tải xuống hoàn tất",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Thông báo nổi và chuông/rung khi tải tệp hoàn tất"
+                setShowBadge(true)
+                enableVibration(true)
+                enableLights(true)
+            }
+            manager.createNotificationChannel(completeChannel)
         }
     }
 
     companion object {
         const val NOTIFICATION_CHANNEL_ID = "vibeload_download_channel"
+        const val NOTIFICATION_CHANNEL_COMPLETE_ID = "vibeload_complete_channel"
         lateinit var instance: VibeLoadApp
             private set
     }

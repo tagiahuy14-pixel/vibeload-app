@@ -4,9 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,13 +19,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.vibeload.app.data.local.entity.HistoryEntity
+import com.vibeload.app.data.local.entity.getFormattedDuration
 import com.vibeload.app.data.local.entity.isImage
+import com.vibeload.app.presentation.common.VibeHaptic
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,6 +42,8 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val items by viewModel.items.collectAsState()
     val context = LocalContext.current
+    val view = LocalView.current
+    var isGridView by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -49,6 +59,15 @@ fun LibraryScreen(
             TopAppBar(
                 title = { Text("Thư viện", fontWeight = FontWeight.Bold) },
                 actions = {
+                    IconButton(onClick = {
+                        VibeHaptic.tab(view)
+                        isGridView = !isGridView
+                    }) {
+                        Icon(
+                            imageVector = if (isGridView) Icons.AutoMirrored.Filled.FormatListBulleted else Icons.Default.GridView,
+                            contentDescription = if (isGridView) "Chuyển sang danh sách" else "Chuyển sang dạng lưới"
+                        )
+                    }
                     SortMenu(
                         currentSort = uiState.sortOrder,
                         onSortSelected = { viewModel.onSortOrderChange(it) }
@@ -136,6 +155,24 @@ fun LibraryScreen(
                             },
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else if (isGridView) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(items, key = { it.id }) { item ->
+                        GridMediaItem(
+                            item = item,
+                            onClick = {
+                                VibeHaptic.click(view)
+                                onPlayMedia(item)
+                            }
                         )
                     }
                 }
@@ -475,6 +512,85 @@ fun MediaItemCard(
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun GridMediaItem(
+    item: HistoryEntity,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.85f)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (item.thumbnailUri.isNotEmpty()) {
+                AsyncImage(
+                    model = item.thumbnailUri,
+                    contentDescription = item.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (item.isAudio) Icons.Default.MusicNote else Icons.Default.Movie,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Duration badge at bottom-right
+            if (item.durationSeconds > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(6.dp)
+                        .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.75f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = item.getFormattedDuration(),
+                        color = androidx.compose.ui.graphics.Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Type icon badge at top-left
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp)
+                    .size(24.dp)
+                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.65f), RoundedCornerShape(6.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = when {
+                        item.isImage -> Icons.Default.Photo
+                        item.isAudio -> Icons.Default.MusicNote
+                        else -> Icons.Default.PlayArrow
+                    },
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.size(15.dp)
+                )
             }
         }
     }

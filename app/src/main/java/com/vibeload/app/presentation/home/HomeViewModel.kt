@@ -374,6 +374,122 @@ class HomeViewModel(
         }
     }
 
+    fun quickDownloadBestQuality(onSuccess: () -> Unit) {
+        val rawInput = _uiState.value.urlInput.trim()
+        val extracted = extractUrlFromText(rawInput)
+        val url = if (extracted.isNotEmpty()) extracted else normalizeUrl(rawInput)
+        if (!isValidUrl(url)) {
+            _uiState.update { it.copy(errorMessage = "Vui lòng nhập đường dẫn URL hợp lệ") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAnalyzing = true, errorMessage = null) }
+            try {
+                // If direct image candidate, attempt image resolution first
+                var metaResult: Result<MediaMetadata>? = null
+                if (isPossibleDirectImageUrl(url)) {
+                    val imgRes = imageResolver.resolve(url)
+                    if (imgRes.isSuccess) {
+                        val imgInfo = imgRes.getOrThrow()
+                        val imgOpt = FormatOption(
+                            formatId = "img_${imgInfo.format.extension}",
+                            label = "Ảnh ${imgInfo.format.displayName}",
+                            ext = imgInfo.format.extension,
+                            resolution = if (imgInfo.width > 0 && imgInfo.height > 0) "${imgInfo.width}x${imgInfo.height}" else imgInfo.format.displayName,
+                            filesize = imgInfo.sizeBytes,
+                            isVideo = false,
+                            width = imgInfo.width,
+                            height = imgInfo.height,
+                            isImage = true,
+                            mimeType = imgInfo.mimeType
+                        )
+                        metaResult = Result.success(
+                            MediaMetadata(
+                                url = imgInfo.url,
+                                title = imgInfo.title,
+                                thumbnail = imgInfo.url,
+                                uploader = "VibeLoad Image",
+                                durationSeconds = 0,
+                                platform = "image",
+                                videoOptions = emptyList(),
+                                audioOptions = emptyList(),
+                                imageOptions = listOf(imgOpt),
+                                isImageOnly = true
+                            )
+                        )
+                    }
+                }
+
+                val result = metaResult ?: downloadEngine.analyzeUrl(url)
+                if (result.isFailure) {
+                    _uiState.update {
+                        it.copy(
+                            isAnalyzing = false,
+                            errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Không thể phân tích liên kết"
+                        )
+                    }
+                    return@launch
+                }
+
+                var meta = result.getOrThrow()
+                if (meta.isImageOnly && meta.imageOptions.size > 1) {
+                    val allImagesOption = FormatOption(
+                        formatId = "ALL_IMAGES",
+                        label = "Tải tất cả (${meta.imageOptions.size} ảnh)",
+                        resolution = "${meta.imageOptions.size} ảnh",
+                        ext = meta.imageOptions.firstOrNull()?.ext ?: "jpg",
+                        filesize = meta.imageOptions.sumOf { it.filesize },
+                        isVideo = false,
+                        isImage = true,
+                        mimeType = "image/jpeg"
+                    )
+                    meta = meta.copy(imageOptions = listOf(allImagesOption) + meta.imageOptions)
+                }
+
+                val bestFormat: FormatOption? = when {
+                    meta.isImageOnly -> {
+                        meta.imageOptions.firstOrNull { it.formatId == "ALL_IMAGES" } ?: meta.imageOptions.firstOrNull()
+                    }
+                    meta.videoOptions.isNotEmpty() -> {
+                        meta.videoOptions.first()
+                    }
+                    meta.audioOptions.isNotEmpty() -> {
+                        meta.audioOptions.firstOrNull { it.bitrateKbps == 320 } ?: meta.audioOptions.first()
+                    }
+                    else -> null
+                }
+
+                if (bestFormat != null) {
+                    val sanitizedName = storageRepository.sanitizeFilename(meta.title, bestFormat.ext)
+                    _uiState.update {
+                        it.copy(
+                            isAnalyzing = false,
+                            metadata = meta,
+                            selectedFormat = bestFormat,
+                            customFilename = sanitizedName
+                        )
+                    }
+                    val startRes = downloadCoordinator.startDownload(
+                        url = meta.url,
+                        metadata = meta,
+                        selectedFormat = bestFormat,
+                        customFilename = sanitizedName
+                    )
+                    if (startRes.isSuccess) {
+                        onSuccess()
+                    } else {
+                        _uiState.update { it.copy(errorMessage = startRes.exceptionOrNull()?.localizedMessage) }
+                    }
+                } else {
+                    _uiState.update { it.copy(isAnalyzing = false, metadata = meta) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isAnalyzing = false, errorMessage = e.localizedMessage ?: "Lỗi tải nhanh") }
+            }
+        }
+    }
+
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }

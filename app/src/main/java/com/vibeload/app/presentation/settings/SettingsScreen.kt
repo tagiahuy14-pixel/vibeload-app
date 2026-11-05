@@ -1,5 +1,6 @@
 package com.vibeload.app.presentation.settings
 
+import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -62,6 +63,35 @@ fun SettingsScreen(
                     title = "Chế độ Tối",
                     selected = uiState.themeMode == "DARK",
                     onClick = { viewModel.setThemeMode("DARK") }
+                )
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingsSwitchRow(
+                        icon = Icons.Default.Palette,
+                        label = "Màu động Material You",
+                        description = "Tự động đổi màu chủ đạo theo hình nền điện thoại",
+                        checked = uiState.dynamicColor,
+                        onCheckedChange = { viewModel.setDynamicColor(it) }
+                    )
+                }
+            }
+
+            // Section 2: Thông báo tải xuống
+            SettingsSection(title = "Thông báo tải xuống") {
+                SettingsSwitchRow(
+                    icon = Icons.Default.NotificationsActive,
+                    label = "Âm thanh khi tải xong",
+                    description = "Phát chuông báo nhẹ khi tệp tải về thành công",
+                    checked = uiState.notifySound,
+                    onCheckedChange = { viewModel.setNotifySound(it) }
+                )
+                SettingsSwitchRow(
+                    icon = Icons.Default.Vibration,
+                    label = "Rung khi tải xong",
+                    description = "Rung phản hồi báo hiệu hoàn tất",
+                    checked = uiState.notifyVibrate,
+                    onCheckedChange = { viewModel.setNotifyVibrate(it) }
                 )
             }
 
@@ -303,6 +333,49 @@ private fun SettingsActionRow(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun SettingsSwitchRow(
+    icon: ImageVector,
+    label: String,
+    description: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
         )
     }
 }

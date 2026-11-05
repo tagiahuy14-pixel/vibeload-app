@@ -15,6 +15,9 @@ import java.util.Locale
 
 data class SettingsUiState(
     val themeMode: String = "SYSTEM",
+    val dynamicColor: Boolean = false,
+    val notifySound: Boolean = true,
+    val notifyVibrate: Boolean = true,
     val availableStorageFormatted: String = "Đang kiểm tra...",
     val appVersion: String = "1.0.0 (1)",
     val engineVersion: String = "",
@@ -33,6 +36,9 @@ class SettingsViewModel(
     private val _uiState = MutableStateFlow(
         SettingsUiState(
             themeMode = settingsRepository.themeModeFlow.value,
+            dynamicColor = settingsRepository.dynamicColorFlow.value,
+            notifySound = settingsRepository.notifySoundFlow.value,
+            notifyVibrate = settingsRepository.notifyVibrateFlow.value,
             appVersion = settingsRepository.getAppVersion(),
             engineVersion = settingsRepository.getEngineVersion()
         )
@@ -43,6 +49,21 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.themeModeFlow.collect { mode ->
                 _uiState.update { it.copy(themeMode = mode) }
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.dynamicColorFlow.collect { dyn ->
+                _uiState.update { it.copy(dynamicColor = dyn) }
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.notifySoundFlow.collect { sound ->
+                _uiState.update { it.copy(notifySound = sound) }
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.notifyVibrateFlow.collect { vib ->
+                _uiState.update { it.copy(notifyVibrate = vib) }
             }
         }
         refreshStorageInfo()
@@ -58,6 +79,18 @@ class SettingsViewModel(
 
     fun setThemeMode(mode: String) {
         settingsRepository.setThemeMode(mode)
+    }
+
+    fun setDynamicColor(enabled: Boolean) {
+        settingsRepository.setDynamicColor(enabled)
+    }
+
+    fun setNotifySound(enabled: Boolean) {
+        settingsRepository.setNotifySound(enabled)
+    }
+
+    fun setNotifyVibrate(enabled: Boolean) {
+        settingsRepository.setNotifyVibrate(enabled)
     }
 
     fun clearCache() {

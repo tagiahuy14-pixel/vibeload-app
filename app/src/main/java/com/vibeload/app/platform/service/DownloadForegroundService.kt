@@ -6,12 +6,15 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.FileProvider
 import com.vibeload.app.R
 import com.vibeload.app.VibeLoadApp
 import com.vibeload.app.presentation.MainActivity
+import java.io.File
 
 class DownloadForegroundService : Service() {
 
@@ -124,15 +127,86 @@ class DownloadForegroundService : Service() {
             context.startService(intent)
         }
 
-        fun notifyComplete(context: Context, title: String, isSuccess: Boolean) {
+        fun notifyComplete(
+            context: Context,
+            title: String,
+            isSuccess: Boolean,
+            filePath: String? = null,
+            mimeType: String? = null,
+            fileSizeFormatted: String? = null
+        ) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val notif = NotificationCompat.Builder(context, VibeLoadApp.NOTIFICATION_CHANNEL_ID)
-                .setContentTitle(if (isSuccess) "Tải thành công!" else "Tải thất bại!")
-                .setContentText(title)
+
+            val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                action = Intent.ACTION_VIEW
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                if (filePath != null) {
+                    putExtra("extra_open_file_path", filePath)
+                }
+            }
+            val contentPendingIntent = PendingIntent.getActivity(
+                context,
+                1002,
+                openAppIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val displayTitle = if (isSuccess) "✅ Tải thành công!" else "❌ Tải thất bại!"
+            val displayBody = when {
+                !isSuccess -> title
+                fileSizeFormatted != null -> "$title ($fileSizeFormatted)"
+                else -> title
+            }
+
+            val builder = NotificationCompat.Builder(context, VibeLoadApp.NOTIFICATION_CHANNEL_COMPLETE_ID)
+                .setContentTitle(displayTitle)
+                .setContentText(displayBody)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(displayBody))
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .setAutoCancel(true)
-                .build()
-            manager.notify(NOTIFICATION_ID + 1, notif)
+                .setContentIntent(contentPendingIntent)
+
+            if (isSuccess && filePath != null) {
+                // Action 1: "Xem ngay"
+                builder.addAction(
+                    R.drawable.ic_launcher_foreground,
+                    "Xem ngay",
+                    contentPendingIntent
+                )
+
+                // Action 2: "Chia sẻ"
+                try {
+                    val file = File(filePath)
+                    if (file.exists()) {
+                        val fileUri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            file
+                        )
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = mimeType ?: "*/*"
+                            putExtra(Intent.EXTRA_STREAM, fileUri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        val chooser = Intent.createChooser(shareIntent, "Chia sẻ tệp qua")
+                        val sharePendingIntent = PendingIntent.getActivity(
+                            context,
+                            1003,
+                            chooser,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        builder.addAction(
+                            R.drawable.ic_launcher_foreground,
+                            "Chia sẻ",
+                            sharePendingIntent
+                        )
+                    }
+                } catch (_: Exception) {}
+            }
+
+            manager.notify(NOTIFICATION_ID + 1, builder.build())
             stop(context)
         }
 

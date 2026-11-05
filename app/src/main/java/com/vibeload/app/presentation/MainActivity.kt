@@ -10,34 +10,52 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
 import com.vibeload.app.VibeLoadApp
+import com.vibeload.app.data.local.entity.isImage
+import com.vibeload.app.platform.coordinator.DownloadCompletedEvent
 import com.vibeload.app.platform.update.UpdateDialogState
+import com.vibeload.app.presentation.common.VibeHaptic
 import com.vibeload.app.presentation.downloading.DownloadingViewModel
 import com.vibeload.app.presentation.home.HomeViewModel
 import com.vibeload.app.presentation.library.LibraryViewModel
 import com.vibeload.app.presentation.navigation.AppNavigation
+import com.vibeload.app.presentation.navigation.Screen
 import com.vibeload.app.presentation.player.PlayerViewModel
 import com.vibeload.app.presentation.settings.SettingsViewModel
 import com.vibeload.app.presentation.theme.VibeLoadTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
@@ -151,21 +169,130 @@ class MainActivity : ComponentActivity() {
                 container.appUpdateManager.checkAutoUpdate()
             }
 
-            VibeLoadTheme(darkTheme = isDarkTheme) {
+            var completedBannerEvent by remember { mutableStateOf<DownloadCompletedEvent?>(null) }
+
+            // In-app download completion banner listener with success haptic
+            LaunchedEffect(Unit) {
+                container.downloadCoordinator.completedEvent.collect { event ->
+                    VibeHaptic.success(view)
+                    completedBannerEvent = event
+                    delay(5000)
+                    if (completedBannerEvent == event) {
+                        completedBannerEvent = null
+                    }
+                }
+            }
+
+            VibeLoadTheme(
+                darkTheme = isDarkTheme,
+                dynamicColor = settingsUiState.dynamicColor
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
 
-                    AppNavigation(
-                        navController = navController,
-                        homeViewModel = homeViewModel,
-                        downloadingViewModel = downloadingViewModel,
-                        libraryViewModel = libraryViewModel,
-                        settingsViewModel = settingsViewModel,
-                        playerViewModel = playerViewModel
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AppNavigation(
+                            navController = navController,
+                            homeViewModel = homeViewModel,
+                            downloadingViewModel = downloadingViewModel,
+                            libraryViewModel = libraryViewModel,
+                            settingsViewModel = settingsViewModel,
+                            playerViewModel = playerViewModel
+                        )
+
+                        // In-App Interactive Floating Banner when download finishes
+                        AnimatedVisibility(
+                            visible = completedBannerEvent != null,
+                            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 44.dp, start = 16.dp, end = 16.dp)
+                                .zIndex(100f)
+                        ) {
+                            completedBannerEvent?.let { event ->
+                                Card(
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    border = BorderStroke(1.5.dp, Color(0xFF10B981).copy(alpha = 0.7f)),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF10B981)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Đã tải xong tệp!",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "${event.fileName} (${event.fileSizeFormatted})",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        Button(
+                                            onClick = {
+                                                val item = event.historyEntity
+                                                completedBannerEvent = null
+                                                if (item.isImage) {
+                                                    try {
+                                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                            setDataAndType(android.net.Uri.parse(item.mediaUriString), item.mimeType)
+                                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                        }
+                                                        startActivity(Intent.createChooser(intent, "Xem ảnh"))
+                                                    } catch (_: Exception) { }
+                                                } else {
+                                                    navController.navigate(
+                                                        Screen.Player.createRoute(
+                                                            mediaUri = item.mediaUriString,
+                                                            title = item.title.ifBlank { item.fileName },
+                                                            isAudio = item.isAudio
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                        ) {
+                                            Text("Xem ngay", fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     // Automatic Update Dialog
                     if (updateDialogState is UpdateDialogState.Prompt) {
@@ -194,7 +321,7 @@ class MainActivity : ComponentActivity() {
                                     Text(
                                         text = "Phiên bản hiện tại: v${info.currentVersionName} (${info.currentVersionCode})",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF475569)
                                     )
                                     Text(
                                         text = "Phiên bản mới: v${info.latestVersionName} (${info.latestVersionCode})",
@@ -224,20 +351,22 @@ class MainActivity : ComponentActivity() {
                                         text = "Nội dung thay đổi:",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = if (isDarkTheme) Color(0xFFF1F5F9) else Color(0xFF0F172A)
                                     )
                                     Card(
                                         colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                            containerColor = if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
                                         ),
-                                        shape = RoundedCornerShape(10.dp),
+                                        border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)),
+                                        shape = RoundedCornerShape(12.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
                                             text = info.releaseNotesVi.ifBlank { "Cải thiện hiệu năng và sửa lỗi." },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(10.dp)
+                                            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 20.sp),
+                                            color = if (isDarkTheme) Color(0xFFF8FAFC) else Color(0xFF0F172A),
+                                            fontWeight = FontWeight.Normal,
+                                            modifier = Modifier.padding(12.dp)
                                         )
                                     }
 

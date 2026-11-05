@@ -24,6 +24,21 @@ class SettingsRepositoryImpl(
     )
     override val themeModeFlow: StateFlow<String> = _themeModeFlow.asStateFlow()
 
+    private val _dynamicColorFlow = MutableStateFlow(
+        prefs.getBoolean(KEY_DYNAMIC_COLOR, false)
+    )
+    override val dynamicColorFlow: StateFlow<Boolean> = _dynamicColorFlow.asStateFlow()
+
+    private val _notifySoundFlow = MutableStateFlow(
+        prefs.getBoolean(KEY_NOTIFY_SOUND, true)
+    )
+    override val notifySoundFlow: StateFlow<Boolean> = _notifySoundFlow.asStateFlow()
+
+    private val _notifyVibrateFlow = MutableStateFlow(
+        prefs.getBoolean(KEY_NOTIFY_VIBRATE, true)
+    )
+    override val notifyVibrateFlow: StateFlow<Boolean> = _notifyVibrateFlow.asStateFlow()
+
     override fun setThemeMode(mode: String) {
         val safeMode = when (mode) {
             "LIGHT", "DARK" -> mode
@@ -31,6 +46,21 @@ class SettingsRepositoryImpl(
         }
         prefs.edit().putString(KEY_THEME_MODE, safeMode).apply()
         _themeModeFlow.value = safeMode
+    }
+
+    override fun setDynamicColor(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
+        _dynamicColorFlow.value = enabled
+    }
+
+    override fun setNotifySound(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_NOTIFY_SOUND, enabled).apply()
+        _notifySoundFlow.value = enabled
+    }
+
+    override fun setNotifyVibrate(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_NOTIFY_VIBRATE, enabled).apply()
+        _notifyVibrateFlow.value = enabled
     }
 
     override suspend fun clearHistory(): Result<Unit> = withContext(Dispatchers.IO) {
@@ -95,5 +125,8 @@ class SettingsRepositoryImpl(
 
     companion object {
         private const val KEY_THEME_MODE = "key_theme_mode"
+        private const val KEY_DYNAMIC_COLOR = "key_dynamic_color"
+        private const val KEY_NOTIFY_SOUND = "key_notify_sound"
+        private const val KEY_NOTIFY_VIBRATE = "key_notify_vibrate"
     }
 }
