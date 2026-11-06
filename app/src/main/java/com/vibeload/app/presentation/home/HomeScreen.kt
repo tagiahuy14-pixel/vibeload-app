@@ -865,6 +865,7 @@ fun HomeScreen(
                         .bringIntoViewRequester(bringIntoViewRequester),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    val isDark = isSystemInDarkTheme()
                     val realImages = meta.imageOptions.filter { it.formatId != "ALL_IMAGES" }
                     val hasMultipleImages = meta.isImageOnly && realImages.size > 1
                     val previewIndex = if (hasMultipleImages) uiState.previewImageIndex.coerceIn(0, (realImages.size - 1).coerceAtLeast(0)) else 0
@@ -1135,8 +1136,17 @@ fun HomeScreen(
                                         }
                                     },
                                 shape = RoundedCornerShape(14.dp),
-                                border = BorderStroke(1.dp, if (isMusicSelected) AccentPurple else MaterialTheme.colorScheme.outlineVariant),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                border = BorderStroke(
+                                    width = if (isMusicSelected) 2.dp else 1.dp,
+                                    color = if (isMusicSelected) (if (isDark) Color(0xFFA78BFA) else AccentPurple) else MaterialTheme.colorScheme.outlineVariant
+                                ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isMusicSelected) {
+                                        if (isDark) Color(0xFF581C87).copy(alpha = 0.35f) else Color(0xFFF3E8FF)
+                                    } else {
+                                        MaterialTheme.colorScheme.surface
+                                    }
+                                )
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -1521,7 +1531,8 @@ fun HomeScreen(
                         onDelete = { libraryViewModel.requestDelete(item) },
                         onRename = { libraryViewModel.requestRename(item) },
                         onShare = { libraryViewModel.shareItem(context, item) },
-                        onOpenWith = { libraryViewModel.openWithExternalApp(context, item) }
+                        onOpenWith = { libraryViewModel.openWithExternalApp(context, item) },
+                        onSetRingtone = { type -> libraryViewModel.setAsRingtone(context, item, type) }
                     )
                 }
             }
@@ -1965,7 +1976,8 @@ fun VibeMediaCard(
     onDelete: () -> Unit,
     onRename: () -> Unit,
     onShare: () -> Unit,
-    onOpenWith: () -> Unit
+    onOpenWith: () -> Unit,
+    onSetRingtone: ((Int) -> Unit)? = null
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -2145,6 +2157,25 @@ fun VibeMediaCard(
                             },
                             leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) }
                         )
+                        if (item.isAudio && onSetRingtone != null) {
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Đặt làm nhạc chuông") },
+                                onClick = {
+                                    menuExpanded = false
+                                    onSetRingtone(android.media.RingtoneManager.TYPE_RINGTONE)
+                                },
+                                leadingIcon = { Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Đặt làm chuông báo thức") },
+                                onClick = {
+                                    menuExpanded = false
+                                    onSetRingtone(android.media.RingtoneManager.TYPE_ALARM)
+                                },
+                                leadingIcon = { Icon(Icons.Default.Alarm, contentDescription = null, tint = AccentPurple) }
+                            )
+                        }
                         HorizontalDivider()
                         DropdownMenuItem(
                             text = { Text("Xóa", color = Color(0xFFEF4444)) },
@@ -2257,35 +2288,99 @@ fun FormatChip(
     durationSeconds: Long = 0L,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
-    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-    val textColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+    val isDark = isSystemInDarkTheme()
+
+    // Vibrant selected colors vs crisp unselected colors
+    val targetBgColor = if (isSelected) {
+        if (isDark) Color(0xFF1E3A8A).copy(alpha = 0.55f) else Color(0xFFEFF6FF)
+    } else {
+        if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF)
+    }
+
+    val targetBorderColor = if (isSelected) {
+        if (isDark) Color(0xFF60A5FA) else Color(0xFF2563EB)
+    } else {
+        if (isDark) Color(0xFF334155) else Color(0xFFCBD5E1)
+    }
+
+    val targetTitleColor = if (isSelected) {
+        if (isDark) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
+    } else {
+        if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    }
+
+    val targetSizeColor = if (isSelected) {
+        if (isDark) Color(0xFFBFDBFE) else Color(0xFF2563EB)
+    } else {
+        if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    }
+
+    val animBgColor by animateColorAsState(targetValue = targetBgColor, animationSpec = tween(180), label = "chipBg")
+    val animBorderColor by animateColorAsState(targetValue = targetBorderColor, animationSpec = tween(180), label = "chipBorder")
+    val animTitleColor by animateColorAsState(targetValue = targetTitleColor, animationSpec = tween(180), label = "chipTitle")
+    val animSizeColor by animateColorAsState(targetValue = targetSizeColor, animationSpec = tween(180), label = "chipSize")
+
+    val sizeText = if (option.filesize > 0L) {
+        option.getFormattedSize()
+    } else {
+        option.getEstimatedSize(durationSeconds)
+    }
 
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(bgColor)
-            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .defaultMinSize(minWidth = 148.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(animBgColor)
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = animBorderColor,
+                shape = RoundedCornerShape(14.dp)
+            )
             .bounceClick { onClick() }
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
-        Column {
-            Text(
-                text = option.label,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = textColor,
-                fontSize = 14.sp
-            )
-            val sizeText = if (option.filesize > 0L) {
-                option.getFormattedSize()
-            } else {
-                option.getEstimatedSize(durationSeconds)
-            }
-            if (sizeText.isNotEmpty()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f, fill = false)) {
                 Text(
-                    text = sizeText,
-                    fontSize = 11.sp,
-                    color = textColor.copy(alpha = 0.75f)
+                    text = option.label,
+                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                    color = animTitleColor,
+                    fontSize = 14.sp
+                )
+                if (sizeText.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = sizeText,
+                        fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = animSizeColor
+                    )
+                }
+            }
+
+            // Visual active selection badge / radio ring
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .background(if (isDark) Color(0xFF60A5FA) else Color(0xFF2563EB), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Đã chọn",
+                        tint = Color.White,
+                        modifier = Modifier.size(13.dp)
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .border(1.5.dp, if (isDark) Color(0xFF475569) else Color(0xFFCBD5E1), CircleShape)
                 )
             }
         }

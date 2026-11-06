@@ -539,6 +539,8 @@ class DownloadCoordinator(
                             rawTempFile.absolutePath,
                             processedFile.absolutePath,
                             task.selectedFormat.bitrateKbps,
+                            title = metadata.title.ifBlank { task.title },
+                            artist = metadata.uploader,
                             onProgress = { }
                         )
 

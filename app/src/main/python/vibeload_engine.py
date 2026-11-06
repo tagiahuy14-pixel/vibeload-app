@@ -533,7 +533,7 @@ def extract_tiktok_music_track(url, clean_url=""):
                                 "success": True,
                                 "id": str(music.get('id') or music_id),
                                 "url": music_final_url,
-                                "title": f"Âm thanh: {title}",
+                                "title": title,
                                 "thumbnail": cover_url,
                                 "uploader": author,
                                 "duration": duration,

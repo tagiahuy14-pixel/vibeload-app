@@ -3,6 +3,10 @@ package com.vibeload.app.presentation.player
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.Toast
+import android.media.RingtoneManager
+import com.vibeload.app.platform.util.RingtoneHelper
+import com.vibeload.app.platform.util.RingtoneResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.ui.PlayerView
 import java.util.Locale
@@ -145,6 +150,51 @@ fun PlayerScreen(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilledTonalButton(
+                                onClick = {
+                                    val uri = Uri.parse(mediaUriString)
+                                    when (val res = RingtoneHelper.setAsRingtone(context, uri, RingtoneManager.TYPE_RINGTONE)) {
+                                        is RingtoneResult.Success -> Toast.makeText(context, "Đã cài làm nhạc chuông cuộc gọi! 🔔", Toast.LENGTH_SHORT).show()
+                                        is RingtoneResult.PermissionRequired -> {
+                                            Toast.makeText(context, "Vui lòng cho phép quyền 'Thay đổi cài đặt hệ thống'", Toast.LENGTH_SHORT).show()
+                                            context.startActivity(res.intent)
+                                        }
+                                        is RingtoneResult.Error -> Toast.makeText(context, "Lỗi: ${res.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color(0xFF1E293B))
+                            ) {
+                                Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFF60A5FA), modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Cài nhạc chuông", color = Color.White, fontSize = 12.sp)
+                            }
+
+                            FilledTonalButton(
+                                onClick = {
+                                    val uri = Uri.parse(mediaUriString)
+                                    when (val res = RingtoneHelper.setAsRingtone(context, uri, RingtoneManager.TYPE_ALARM)) {
+                                        is RingtoneResult.Success -> Toast.makeText(context, "Đã cài làm chuông báo thức! ⏰", Toast.LENGTH_SHORT).show()
+                                        is RingtoneResult.PermissionRequired -> {
+                                            Toast.makeText(context, "Vui lòng cho phép quyền 'Thay đổi cài đặt hệ thống'", Toast.LENGTH_SHORT).show()
+                                            context.startActivity(res.intent)
+                                        }
+                                        is RingtoneResult.Error -> Toast.makeText(context, "Lỗi: ${res.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color(0xFF1E293B))
+                            ) {
+                                Icon(Icons.Default.Alarm, contentDescription = null, tint = Color(0xFFA78BFA), modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Đặt báo thức", color = Color.White, fontSize = 12.sp)
+                            }
+                        }
                     }
                 } else {
                     // Video PlayerView

@@ -12,6 +12,8 @@ interface MediaProcessor {
         inputPath: String,
         outputPath: String,
         bitrateKbps: Int,
+        title: String? = null,
+        artist: String? = null,
         onProgress: (Float) -> Unit
     ): Result<String>
 

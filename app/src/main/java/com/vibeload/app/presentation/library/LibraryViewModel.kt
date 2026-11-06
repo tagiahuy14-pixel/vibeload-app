@@ -186,4 +186,21 @@ class LibraryViewModel(
             _uiState.update { it.copy(infoMessage = "Không thể mở thư mục") }
         }
     }
+
+    fun setAsRingtone(context: Context, item: HistoryEntity, type: Int = android.media.RingtoneManager.TYPE_RINGTONE) {
+        val uri = Uri.parse(item.mediaUriString)
+        val typeLabel = if (type == android.media.RingtoneManager.TYPE_ALARM) "chuông báo thức" else "nhạc chuông cuộc gọi"
+        when (val result = com.vibeload.app.platform.util.RingtoneHelper.setAsRingtone(context, uri, type)) {
+            is com.vibeload.app.platform.util.RingtoneResult.Success -> {
+                _uiState.update { it.copy(infoMessage = "Đã cài làm $typeLabel thành công! 🔔") }
+            }
+            is com.vibeload.app.platform.util.RingtoneResult.PermissionRequired -> {
+                _uiState.update { it.copy(infoMessage = "Vui lòng cho phép 'Thay đổi cài đặt hệ thống' để cài nhạc chuông") }
+                context.startActivity(result.intent)
+            }
+            is com.vibeload.app.platform.util.RingtoneResult.Error -> {
+                _uiState.update { it.copy(infoMessage = "Lỗi cài $typeLabel: ${result.message}") }
+            }
+        }
+    }
 }

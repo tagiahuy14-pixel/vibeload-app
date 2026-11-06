@@ -67,6 +67,8 @@ class FFmpegMediaProcessor : MediaProcessor {
         inputPath: String,
         outputPath: String,
         bitrateKbps: Int,
+        title: String?,
+        artist: String?,
         onProgress: (Float) -> Unit
     ): Result<String> = withContext(Dispatchers.IO) {
         suspendCancellableCoroutine { continuation ->
@@ -74,7 +76,19 @@ class FFmpegMediaProcessor : MediaProcessor {
                 128, 192, 256, 320 -> bitrateKbps
                 else -> 192
             }
-            val cmd = "-y -i \"$inputPath\" -vn -acodec libmp3lame -b:a ${safeBitrate}k \"$outputPath\""
+            val metaParams = buildString {
+                if (!title.isNullOrBlank()) {
+                    val cleanTitle = title.replace("\"", "\\\"")
+                    append(" -metadata title=\"$cleanTitle\"")
+                }
+                if (!artist.isNullOrBlank()) {
+                    val cleanArtist = artist.replace("\"", "\\\"")
+                    append(" -metadata artist=\"$cleanArtist\"")
+                }
+                append(" -metadata album=\"VibeLoad\"")
+                append(" -id3v2_version 3")
+            }
+            val cmd = "-y -i \"$inputPath\" -vn -acodec libmp3lame -b:a ${safeBitrate}k$metaParams \"$outputPath\""
 
             val session = FFmpegKit.executeAsync(
                 cmd,

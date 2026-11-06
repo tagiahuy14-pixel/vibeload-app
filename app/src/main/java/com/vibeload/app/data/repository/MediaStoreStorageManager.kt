@@ -23,11 +23,17 @@ class MediaStoreStorageManager(
 
     companion object {
         fun sanitize(rawTitle: String, extension: String): String {
-            // Remove illegal characters on Android/Windows: \ / : * ? " < > |
-            var sanitized = rawTitle
+            // 1. Smart prefix cleaner: Remove redundant prefixes like "Âm thanh: ", "Âm thanh_ ", "Video: ", "Nhạc: ", etc.
+            var cleaned = rawTitle.trim()
+            val prefixRegex = Regex("^(?:Âm thanh|Video|Nhạc|Sound|Audio|Music)\\s*[:\\-_|]\\s*", RegexOption.IGNORE_CASE)
+            cleaned = cleaned.replace(prefixRegex, "").trim()
+
+            // 2. Remove illegal characters on Android/Windows: \ / : * ? " < > |
+            var sanitized = cleaned
                 .replace(Regex("[\\\\/:*?\"<>|]"), "_")
                 .replace(Regex("\\.{2,}"), "") // prevent path traversal ..
-                .trim()
+                .replace(Regex("[_\\s]{2,}"), " ") // collapse multiple spaces/underscores
+                .trim(' ', '_', '-')
 
             if (sanitized.isEmpty() || sanitized == "_") {
                 sanitized = "VibeLoad_Media_${System.currentTimeMillis()}"
@@ -35,7 +41,7 @@ class MediaStoreStorageManager(
 
             // Limit length to avoid filesystem max path issues
             if (sanitized.length > 100) {
-                sanitized = sanitized.substring(0, 100).trim()
+                sanitized = sanitized.substring(0, 100).trim(' ', '_', '-')
             }
 
             val cleanExt = extension.removePrefix(".")
@@ -82,6 +88,12 @@ class MediaStoreStorageManager(
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, uniqueDisplayName)
                 put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                if (isAudio) {
+                    put(MediaStore.Audio.Media.IS_RINGTONE, 1)
+                    put(MediaStore.Audio.Media.IS_NOTIFICATION, 1)
+                    put(MediaStore.Audio.Media.IS_ALARM, 1)
+                    put(MediaStore.Audio.Media.IS_MUSIC, 1)
+                }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                     put(MediaStore.MediaColumns.IS_PENDING, 1)

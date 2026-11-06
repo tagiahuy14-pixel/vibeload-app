@@ -190,7 +190,8 @@ fun LibraryScreen(
                             onDelete = { viewModel.requestDelete(item) },
                             onRename = { viewModel.requestRename(item) },
                             onShare = { viewModel.shareItem(context, item) },
-                            onOpenWith = { viewModel.openWithExternalApp(context, item) }
+                            onOpenWith = { viewModel.openWithExternalApp(context, item) },
+                            onSetRingtone = { type -> viewModel.setAsRingtone(context, item, type) }
                         )
                     }
                 }
@@ -335,7 +336,8 @@ fun MediaItemCard(
     onRename: () -> Unit,
     onShare: () -> Unit,
     onOpenExternal: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onSetRingtone: ((Int) -> Unit)? = null
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -500,6 +502,25 @@ fun MediaItemCard(
                         },
                         leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = null) }
                     )
+                    if (item.isAudio && onSetRingtone != null) {
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Đặt làm nhạc chuông") },
+                            onClick = {
+                                menuExpanded = false
+                                onSetRingtone(android.media.RingtoneManager.TYPE_RINGTONE)
+                            },
+                            leadingIcon = { Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Đặt làm chuông báo thức") },
+                            onClick = {
+                                menuExpanded = false
+                                onSetRingtone(android.media.RingtoneManager.TYPE_ALARM)
+                            },
+                            leadingIcon = { Icon(Icons.Default.Alarm, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                        )
+                    }
                     HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("Xóa", color = MaterialTheme.colorScheme.error) },
