@@ -1,8 +1,8 @@
 {
-  "versionCode": 16,
-  "versionName": "1.0.15",
-  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.15/app-release.apk",
-  "sha256": "A9081092CD16615AE6F8A9F73BA86B364178D12AAE0D3002147819C9AB5902A8",
+  "versionCode": 17,
+  "versionName": "1.0.16",
+  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.16/app-release.apk",
+  "sha256": "77771073CA1008175AA59F9237396209581959825D4CD6147B300BE49C6C3301",
   "mandatory": false,
-  "releaseNotes": "Tối ưu giao diện & sửa lỗi tương phản: Biểu tượng TikTok hiển thị nổi bật sắc nét trên nền Dark Slate ở cả Chế độ Sáng và Tối; Viên thuốc lọc thư viện khi chọn hiển thị nền Primary xanh tím với chữ trắng sắc nét, loại bỏ triệt để lỗi chữ trắng trên nền trắng; Tối ưu khoảng cách và kích thước thẻ nền tảng chống cắt chữ."
+  "releaseNotes": "Cải tiến giao diện nút chọn chất lượng siêu nổi bật (viền 2dp, badge tích xanh), bộ làm sạch tên file lưu trữ thông minh và tích hợp cài làm nhạc chuông/báo thức 1 chạm."
 }
