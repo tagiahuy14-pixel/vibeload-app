@@ -1,12 +1,15 @@
 package com.vibeload.app.presentation.navigation
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -14,16 +17,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -73,131 +79,116 @@ fun AppNavigation(
     val selectedIndex = remember(currentRoute) {
         bottomNavItems.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
     }
-    val animatedIndex by animateFloatAsState(
-        targetValue = selectedIndex.toFloat(),
-        animationSpec = spring(
-            dampingRatio = 0.82f,
-            stiffness = 420f
-        ),
-        label = "liquidNavIndicator"
-    )
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
+                val coroutineScope = rememberCoroutineScope()
+                val count = bottomNavItems.size.coerceAtLeast(1)
+                val navPosition = remember { Animatable(selectedIndex.toFloat()) }
+                var isDraggingNav by remember { mutableStateOf(false) }
+
+                LaunchedEffect(selectedIndex) {
+                    if (!isDraggingNav && navPosition.targetValue != selectedIndex.toFloat()) {
+                        navPosition.animateTo(
+                            targetValue = selectedIndex.toFloat(),
+                            animationSpec = spring(
+                                dampingRatio = 0.82f,
+                                stiffness = 420f
+                            )
+                        )
+                    }
+                }
+
+                val dockShape = RoundedCornerShape(999.dp)
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(
-                            elevation = 16.dp,
-                            spotColor = Color(0xFF0066FF).copy(alpha = if (isDark) 0.20f else 0.10f),
-                            ambientColor = Color(0xFF10B981).copy(alpha = if (isDark) 0.12f else 0.06f)
-                        )
-                        .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.88f else 0.94f))
-                        .drawBehind {
-                            val strokeWidth = 1.dp.toPx()
-                            drawLine(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = if (isDark) 0.05f else 0.30f),
-                                        Color.White.copy(alpha = if (isDark) 0.40f else 0.90f),
-                                        Color(0xFF00C6FF).copy(alpha = if (isDark) 0.45f else 0.60f),
-                                        Color.White.copy(alpha = if (isDark) 0.25f else 0.70f),
-                                        Color.White.copy(alpha = if (isDark) 0.05f else 0.25f)
-                                    )
-                                ),
-                                start = Offset(0f, 0f),
-                                end = Offset(size.width, 0f),
-                                strokeWidth = strokeWidth
-                            )
-                        }
-                        .windowInsetsPadding(NavigationBarDefaults.windowInsets)
-                        .height(68.dp)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    // Upper Glossy Sheen
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(28.dp)
-                            .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.08f else 0.20f))
-                    )
-
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        val count = bottomNavItems.size.coerceAtLeast(1)
-                        val tabWidth = maxWidth / count
-                        val capsuleWidth = tabWidth - 16.dp
-                        val capsuleHeight = 52.dp
-
-                        // Sliding Liquid Glass Capsule Indicator
+                            .height(64.dp)
+                            .shadow(
+                                elevation = 12.dp,
+                                shape = dockShape,
+                                spotColor = Color(0xFF0071E3).copy(alpha = if (isDark) 0.35f else 0.15f),
+                                ambientColor = Color(0xFF00C6FF).copy(alpha = if (isDark) 0.18f else 0.08f)
+                            )
+                            .clip(dockShape)
+                            .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.82f else 0.92f))
+                            .border(1.dp, LiquidGlassTokens.specularBorder(isDark), dockShape)
+                    ) {
+                        // Upper Glossy Sheen along the floating dock
                         Box(
                             modifier = Modifier
-                                .offset(
-                                    x = tabWidth * animatedIndex + 8.dp,
-                                    y = 8.dp
-                                )
-                                .width(capsuleWidth)
-                                .height(capsuleHeight)
-                                .shadow(
-                                    elevation = 4.dp,
-                                    shape = RoundedCornerShape(16.dp),
-                                    spotColor = Color(0xFF0071E3).copy(alpha = 0.28f)
-                                )
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    if (isDark) {
-                                        Brush.verticalGradient(
-                                            listOf(
-                                                Color(0xFF0071E3).copy(alpha = 0.30f),
-                                                Color(0xFF00C6FF).copy(alpha = 0.14f)
-                                            )
-                                        )
-                                    } else {
-                                        Brush.verticalGradient(
-                                            listOf(
-                                                Color(0xFF0071E3).copy(alpha = 0.15f),
-                                                Color(0xFF00C6FF).copy(alpha = 0.07f)
-                                            )
-                                        )
-                                    }
-                                )
-                                .border(
-                                    1.dp,
-                                    LiquidGlassTokens.specularBorder(isDark, if (isDark) 0.45f else 0.85f),
-                                    RoundedCornerShape(16.dp)
-                                )
-                        ) {
-                            // Capsule Upper Specular Sheen
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(20.dp)
-                                    .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.20f else 0.38f))
-                            )
-                        }
+                                .fillMaxWidth()
+                                .height(26.dp)
+                                .clip(RoundedCornerShape(topStart = 999.dp, topEnd = 999.dp))
+                                .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.10f else 0.25f))
+                        )
 
-                        // Row of Clickable Tabs
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            bottomNavItems.forEachIndexed { index, screen ->
-                                val selected = selectedIndex == index
-                                val itemColor by animateColorAsState(
-                                    targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    label = "tabColor"
-                                )
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp)
+                                .pointerInput(count) {
+                                    val touchSlop = viewConfiguration.touchSlop
+                                    val tabWidthPx = size.width.toFloat() / count
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown(requireUnconsumed = false)
+                                        val startX = down.position.x
+                                        var activeIndex = (startX / tabWidthPx).toInt().coerceIn(0, count - 1)
+                                        var hasDragged = false
 
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null
-                                        ) {
-                                            if (currentRoute != screen.route) {
+                                        try {
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                                if (!change.pressed) {
+                                                    change.consume()
+                                                    break
+                                                }
+                                                val currentX = change.position.x
+                                                val deltaX = abs(currentX - startX)
+
+                                                if (!hasDragged && deltaX > touchSlop) {
+                                                    hasDragged = true
+                                                    isDraggingNav = true
+                                                }
+
+                                                if (hasDragged) {
+                                                    val currentFraction = ((currentX - tabWidthPx / 2f) / tabWidthPx).coerceIn(0f, (count - 1).toFloat())
+                                                    coroutineScope.launch {
+                                                        navPosition.snapTo(currentFraction)
+                                                    }
+
+                                                    val hoveredIndex = currentFraction.roundToInt().coerceIn(0, count - 1)
+                                                    if (hoveredIndex != activeIndex) {
+                                                        activeIndex = hoveredIndex
+                                                        VibeHaptic.tab(view)
+                                                    }
+                                                    change.consume()
+                                                }
+                                            }
+                                        } finally {
+                                            isDraggingNav = false
+                                            val finalIndex = if (hasDragged) {
+                                                navPosition.value.roundToInt().coerceIn(0, count - 1)
+                                            } else {
+                                                (startX / tabWidthPx).toInt().coerceIn(0, count - 1)
+                                            }
+
+                                            if (!hasDragged) {
                                                 VibeHaptic.tab(view)
-                                                navController.navigate(screen.route) {
+                                            }
+
+                                            val targetScreen = bottomNavItems[finalIndex]
+                                            if (currentRoute != targetScreen.route) {
+                                                navController.navigate(targetScreen.route) {
                                                     popUpTo(Screen.Home.route) {
                                                         saveState = true
                                                     }
@@ -205,46 +196,131 @@ fun AppNavigation(
                                                     restoreState = true
                                                 }
                                             }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
+
+                                            coroutineScope.launch {
+                                                navPosition.animateTo(
+                                                    targetValue = finalIndex.toFloat(),
+                                                    animationSpec = spring(
+                                                        dampingRatio = 0.82f,
+                                                        stiffness = 420f
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                        ) {
+                            val tabWidth = maxWidth / count
+                            val capsuleWidth = tabWidth - 8.dp
+                            val capsuleHeight = 48.dp
+                            val capsuleShape = RoundedCornerShape(999.dp)
+
+                            // Sliding Liquid Glass Capsule Indicator
+                            Box(
+                                modifier = Modifier
+                                    .offset(
+                                        x = tabWidth * navPosition.value + 4.dp,
+                                        y = 4.dp
+                                    )
+                                    .width(capsuleWidth)
+                                    .height(capsuleHeight)
+                                    .shadow(
+                                        elevation = 6.dp,
+                                        shape = capsuleShape,
+                                        spotColor = Color(0xFF0071E3).copy(alpha = if (isDark) 0.40f else 0.22f)
+                                    )
+                                    .clip(capsuleShape)
+                                    .background(
+                                        if (isDark) {
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color(0xFF0071E3).copy(alpha = 0.38f),
+                                                    Color(0xFF00C6FF).copy(alpha = 0.18f)
+                                                )
+                                            )
+                                        } else {
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color(0xFF0071E3).copy(alpha = 0.18f),
+                                                    Color(0xFF00C6FF).copy(alpha = 0.08f)
+                                                )
+                                            )
+                                        }
+                                    )
+                                    .border(
+                                        1.dp,
+                                        LiquidGlassTokens.specularBorder(isDark, if (isDark) 0.60f else 0.90f),
+                                        capsuleShape
+                                    )
+                            ) {
+                                // Capsule Upper Specular Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(20.dp)
+                                        .clip(RoundedCornerShape(topStart = 999.dp, topEnd = 999.dp))
+                                        .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.22f else 0.40f))
+                                )
+                            }
+
+                            // Row of Nav Tabs
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val currentActiveIndex = if (isDraggingNav) navPosition.value.roundToInt().coerceIn(0, count - 1) else selectedIndex
+
+                                bottomNavItems.forEachIndexed { index, screen ->
+                                    val selected = currentActiveIndex == index
+                                    val itemColor by animateColorAsState(
+                                        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        label = "tabColor"
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight(),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        if (screen == Screen.Downloading && isDownloadActive) {
-                                            BadgedBox(
-                                                badge = {
-                                                    Badge(containerColor = MaterialTheme.colorScheme.primary) {
-                                                        Text("1", color = Color.White)
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            if (screen == Screen.Downloading && isDownloadActive) {
+                                                BadgedBox(
+                                                    badge = {
+                                                        Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                                            Text("1", color = Color.White)
+                                                        }
                                                     }
+                                                ) {
+                                                    Icon(
+                                                        imageVector = screen.icon,
+                                                        contentDescription = screen.title,
+                                                        tint = itemColor,
+                                                        modifier = Modifier.size(22.dp)
+                                                    )
                                                 }
-                                            ) {
+                                            } else {
                                                 Icon(
                                                     imageVector = screen.icon,
                                                     contentDescription = screen.title,
                                                     tint = itemColor,
-                                                    modifier = Modifier.size(24.dp)
+                                                    modifier = Modifier.size(22.dp)
                                                 )
                                             }
-                                        } else {
-                                            Icon(
-                                                imageVector = screen.icon,
-                                                contentDescription = screen.title,
-                                                tint = itemColor,
-                                                modifier = Modifier.size(24.dp)
+
+                                            Spacer(modifier = Modifier.height(2.dp))
+
+                                            Text(
+                                                text = screen.title,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                                color = itemColor,
+                                                maxLines = 1
                                             )
                                         }
-
-                                        Spacer(modifier = Modifier.height(3.dp))
-
-                                        Text(
-                                            text = screen.title,
-                                            fontSize = 11.sp,
-                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                            color = itemColor,
-                                            maxLines = 1
-                                        )
                                     }
                                 }
                             }
@@ -252,7 +328,8 @@ fun AppNavigation(
                     }
                 }
             }
-        }
+        },
+        containerColor = Color.Transparent
     ) { paddingValues ->
         NavHost(
             navController = navController,

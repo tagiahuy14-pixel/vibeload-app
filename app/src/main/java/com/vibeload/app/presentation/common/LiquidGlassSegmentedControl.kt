@@ -262,22 +262,22 @@ fun LiquidGlassSegmentedControl(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 2.dp)
+                                .padding(horizontal = 1.dp)
                         ) {
                             item.icon?.let { icon ->
                                 Icon(
                                     imageVector = icon,
                                     contentDescription = null,
                                     tint = textColor,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
-                                Spacer(modifier = Modifier.width(3.5.dp))
+                                Spacer(modifier = Modifier.width(2.5.dp))
                             }
                             Text(
                                 text = item.title,
                                 color = textColor,
-                                fontSize = 11.5.sp,
-                                letterSpacing = (-0.2).sp,
+                                fontSize = 11.sp,
+                                letterSpacing = (-0.3).sp,
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                                 maxLines = 1,
                                 softWrap = false,
