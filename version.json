@@ -1,8 +1,8 @@
 {
-  "versionCode": 24,
-  "versionName": "1.0.23",
-  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.23/app-release.apk",
-  "sha256": "446C1E01CB8F2C2760323A17C80A5A5C27E080FAE5CF7862559C1C5535EF1E1B",
+  "versionCode": 25,
+  "versionName": "1.0.24",
+  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.24/app-release.apk",
+  "sha256": "99934D5960CC3A48318E459292FC6FAA66DBCED02B7BDD274D077B9796F79D49",
   "mandatory": false,
-  "releaseNotes": "Cải tiến giao diện nút chọn chất lượng siêu nổi bật (viền 2dp, badge tích xanh), bộ làm sạch tên file lưu trữ thông minh và tích hợp cài làm nhạc chuông/báo thức 1 chạm."
+  "releaseNotes": "Khắc phục triệt để lỗi thanh điều hướng Liquid Glass Dock: chuyển đổi mượt mà giữa tất cả các tab và quay về Trang chủ bất kỳ lúc nào."
 }
