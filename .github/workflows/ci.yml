@@ -31,9 +31,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 

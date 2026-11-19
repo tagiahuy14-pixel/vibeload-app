@@ -30,9 +30,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 
@@ -51,9 +48,18 @@ jobs:
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
           echo "SHA256 Checksum: $SHA256"
 
+      - name: Check If Release Asset Already Uploaded
+        id: check_asset
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          ASSET_EXISTS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" | jq -r '.assets[]?.name' | grep -q 'app-release.apk' && echo 'true' || echo 'false')
+          echo "exists=$ASSET_EXISTS" >> $GITHUB_OUTPUT
+          echo "Asset already uploaded by publish tool: $ASSET_EXISTS"
+
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && steps.check_asset.outputs.exists != 'true'
         with:
           draft: false
           prerelease: false
