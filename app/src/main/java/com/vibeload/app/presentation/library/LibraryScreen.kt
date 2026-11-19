@@ -1,6 +1,7 @@
 package com.vibeload.app.presentation.library
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -31,9 +34,12 @@ import coil.request.ImageRequest
 import com.vibeload.app.data.local.entity.HistoryEntity
 import com.vibeload.app.data.local.entity.getFormattedDuration
 import com.vibeload.app.data.local.entity.isImage
+import com.vibeload.app.presentation.common.LiquidGlassAmbientBackground
 import com.vibeload.app.presentation.common.LiquidGlassSegmentedControl
 import com.vibeload.app.presentation.common.LiquidGlassTabItem
+import com.vibeload.app.presentation.common.LiquidGlassTokens
 import com.vibeload.app.presentation.common.VibeHaptic
+import com.vibeload.app.presentation.theme.isAppDarkTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -47,6 +53,7 @@ fun LibraryScreen(
     val items by viewModel.items.collectAsState()
     val context = LocalContext.current
     val view = LocalView.current
+    val isDark = isAppDarkTheme()
     var isGridView by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -62,6 +69,10 @@ fun LibraryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Thư viện", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                ),
                 actions = {
                     IconButton(onClick = {
                         VibeHaptic.tab(view)
@@ -69,7 +80,8 @@ fun LibraryScreen(
                     }) {
                         Icon(
                             imageVector = if (isGridView) Icons.AutoMirrored.Filled.FormatListBulleted else Icons.Default.GridView,
-                            contentDescription = if (isGridView) "Chuyển sang danh sách" else "Chuyển sang dạng lưới"
+                            contentDescription = if (isGridView) "Chuyển sang danh sách" else "Chuyển sang dạng lưới",
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                     SortMenu(
@@ -79,13 +91,15 @@ fun LibraryScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.Transparent
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+        LiquidGlassAmbientBackground(isDark = isDark) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
             // Search Bar
             OutlinedTextField(
                 value = uiState.searchQuery,
@@ -187,6 +201,7 @@ fun LibraryScreen(
                 }
             }
         }
+    }
     }
 
     // Rename Dialog
@@ -341,15 +356,29 @@ fun MediaItemCard(
         String.format(Locale.US, "%.1f MB", mb)
     }
 
-    Card(
+    val isDark = isAppDarkTheme()
+    val shape = RoundedCornerShape(18.dp)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onPlay() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+            .shadow(
+                elevation = if (isDark) 4.dp else 6.dp,
+                shape = shape,
+                spotColor = Color(0xFF0071E3).copy(alpha = if (isDark) 0.18f else 0.08f)
+            )
+            .clip(shape)
+            .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.72f else 0.88f))
+            .border(1.dp, LiquidGlassTokens.specularBorder(isDark), shape)
+            .clickable { onPlay() }
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp)
+                .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.08f else 0.20f))
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -533,13 +562,22 @@ fun GridMediaItem(
     item: HistoryEntity,
     onClick: () -> Unit
 ) {
-    Card(
+    val isDark = isAppDarkTheme()
+    val shape = RoundedCornerShape(16.dp)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.85f)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            .shadow(
+                elevation = if (isDark) 4.dp else 6.dp,
+                shape = shape,
+                spotColor = Color(0xFF0071E3).copy(alpha = if (isDark) 0.20f else 0.10f)
+            )
+            .clip(shape)
+            .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.75f else 0.88f))
+            .border(1.dp, LiquidGlassTokens.specularBorder(isDark), shape)
+            .clickable { onClick() }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (item.thumbnailUri.isNotEmpty()) {

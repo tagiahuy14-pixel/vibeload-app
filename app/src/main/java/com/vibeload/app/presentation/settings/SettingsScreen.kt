@@ -1,6 +1,8 @@
 package com.vibeload.app.presentation.settings
 
 import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,9 +14,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vibeload.app.presentation.common.LiquidGlassAmbientBackground
+import com.vibeload.app.presentation.common.LiquidGlassTokens
+import com.vibeload.app.presentation.theme.isAppDarkTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,6 +31,7 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val isDark = isAppDarkTheme()
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let { msg ->
@@ -34,19 +43,25 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cài đặt", fontWeight = FontWeight.Bold) }
+                title = { Text("Cài đặt", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.Transparent
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
+        LiquidGlassAmbientBackground(isDark = isDark) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
             // Section 1: Giao diện
             SettingsSection(title = "Giao diện") {
                 ThemeOptionRow(
@@ -169,25 +184,32 @@ fun SettingsScreen(
             }
 
             // Section 5: Giới thiệu
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "VibeLoad v${uiState.appVersion.substringBefore(" ")}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Ứng dụng tải video & âm thanh trực tiếp trên thiết bị (100% On-Device, Serverless). Tôn trọng quyền riêng tư, không máy chủ trung gian, không thu thập dữ liệu.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation = 4.dp,
+                            shape = RoundedCornerShape(20.dp),
+                            spotColor = Color(0xFF0071E3).copy(alpha = if (isDark) 0.15f else 0.08f)
+                        )
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.75f else 0.88f))
+                        .border(1.dp, LiquidGlassTokens.specularBorder(isDark), RoundedCornerShape(20.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "VibeLoad v${uiState.appVersion.substringBefore(" ")}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Ứng dụng tải video & âm thanh trực tiếp trên thiết bị (100% On-Device, Serverless). Tôn trọng quyền riêng tư, không máy chủ trung gian, không thu thập dữ liệu.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -224,6 +246,8 @@ private fun SettingsSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val isDark = isAppDarkTheme()
+    val shape = RoundedCornerShape(20.dp)
     Column {
         Text(
             text = title,
@@ -232,12 +256,17 @@ private fun SettingsSection(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-            )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 4.dp,
+                    shape = shape,
+                    spotColor = Color(0xFF0071E3).copy(alpha = if (isDark) 0.15f else 0.08f)
+                )
+                .clip(shape)
+                .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.75f else 0.88f))
+                .border(1.dp, LiquidGlassTokens.specularBorder(isDark), shape)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),

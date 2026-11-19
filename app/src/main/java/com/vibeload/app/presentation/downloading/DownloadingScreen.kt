@@ -1,6 +1,7 @@
 package com.vibeload.app.presentation.downloading
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +50,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vibeload.app.R
 import com.vibeload.app.domain.model.DownloadStatus
+import com.vibeload.app.presentation.common.LiquidGlassAmbientBackground
+import com.vibeload.app.presentation.common.LiquidGlassTokens
+import com.vibeload.app.presentation.theme.isAppDarkTheme
 
 @Composable
 fun DownloadingScreen(
@@ -54,56 +60,87 @@ fun DownloadingScreen(
     onNavigateToLibrary: () -> Unit
 ) {
     val activeTask by viewModel.activeTask.collectAsState()
+    val isDark = isAppDarkTheme()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.dl_active_task_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
+    LiquidGlassAmbientBackground(isDark = isDark) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = stringResource(R.string.dl_active_task_title),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        if (activeTask == null || activeTask?.status == DownloadStatus.IDLE) {
-            // Empty State
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 60.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.FileDownload,
-                        contentDescription = null,
-                        modifier = Modifier.size(72.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.dl_no_active_task),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            if (activeTask == null || activeTask?.status == DownloadStatus.IDLE) {
+                // Empty State
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 60.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(110.dp)
+                                .shadow(
+                                    elevation = 6.dp,
+                                    shape = RoundedCornerShape(28.dp),
+                                    spotColor = Color(0xFF0071E3).copy(alpha = if (isDark) 0.20f else 0.10f)
+                                )
+                                .clip(RoundedCornerShape(28.dp))
+                                .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.75f else 0.88f))
+                                .border(1.dp, LiquidGlassTokens.specularBorder(isDark), RoundedCornerShape(28.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.FileDownload,
+                                contentDescription = null,
+                                modifier = Modifier.size(54.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = stringResource(R.string.dl_no_active_task),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-            }
-        } else {
-            val task = activeTask!!
+            } else {
+                val task = activeTask!!
+                val taskCardShape = RoundedCornerShape(22.dp)
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation = 6.dp,
+                            shape = taskCardShape,
+                            spotColor = Color(0xFF0071E3).copy(alpha = if (isDark) 0.25f else 0.12f)
+                        )
+                        .clip(taskCardShape)
+                        .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.80f else 0.92f))
+                        .border(1.dp, LiquidGlassTokens.specularBorder(isDark), taskCardShape)
+                ) {
+                    // Upper Glossy Sheen
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp)
+                            .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.10f else 0.25f))
+                    )
+
+                    Column(modifier = Modifier.padding(18.dp)) {
                     // Title and status badge
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -283,6 +320,7 @@ fun DownloadingScreen(
             }
         }
     }
+}
 }
 
 @Composable
