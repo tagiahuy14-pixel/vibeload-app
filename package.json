@@ -1,6 +1,6 @@
 {
   "name": "vibeload-app-android",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "private": true,
   "description": "Android Native client for VibeLoad",
   "scripts": {

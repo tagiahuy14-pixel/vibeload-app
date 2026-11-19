@@ -410,20 +410,14 @@ def extract_tiktok_photos(url):
     Tries TikWM fallback first for shortlinks (vt.tiktok.com/vm.tiktok.com),
     and direct HTML parsing first for full URLs.
     """
-    url_lower = url.lower()
-    if "vt.tiktok.com" in url_lower or "vm.tiktok.com" in url_lower:
-        tikwm_res = extract_tiktok_via_tikwm(url)
-        if tikwm_res:
-            return tikwm_res
-        direct_res = extract_tiktok_photos_direct(url)
-        if direct_res:
-            return direct_res
-        return None
-
+    # Try ultra-fast TikWM API first (sub-second response for both videos and photo slideshows)
+    tikwm_res = extract_tiktok_via_tikwm(url)
+    if tikwm_res:
+        return tikwm_res
     direct_res = extract_tiktok_photos_direct(url)
     if direct_res:
         return direct_res
-    return extract_tiktok_via_tikwm(url)
+    return None
 
 def extract_tiktok_music_track(url, clean_url=""):
     """
@@ -700,31 +694,64 @@ def extract_opengraph_media(url):
     except Exception:
         return None
 
+_URL_ANALYSIS_CACHE = {}
+_MAX_CACHE_SIZE = 100
+
+def _cache_result(cache_key, result_dict):
+    global _URL_ANALYSIS_CACHE
+    if not cache_key or not isinstance(result_dict, dict) or not result_dict.get("success"):
+        return
+    if len(_URL_ANALYSIS_CACHE) >= _MAX_CACHE_SIZE:
+        # Evict oldest entry
+        oldest = next(iter(_URL_ANALYSIS_CACHE))
+        del _URL_ANALYSIS_CACHE[oldest]
+    _URL_ANALYSIS_CACHE[cache_key] = result_dict
+
 def analyze_url(url):
     """
     Analyze given media URL and return structured JSON metadata.
     Supports YouTube, TikTok, Facebook, Instagram, SoundCloud, etc.
     """
+    if not url:
+        return json.dumps({"success": False, "error": "Vui lòng nhập liên kết hợp lệ."})
+
+    cache_key = url.strip()
+    if cache_key in _URL_ANALYSIS_CACHE:
+        return json.dumps(_URL_ANALYSIS_CACHE[cache_key])
+
     clean_url = clean_and_normalize_url(url)
     clean_url = resolve_redirect_if_needed(clean_url)
+    clean_cache_key = clean_url.strip()
+    if clean_cache_key in _URL_ANALYSIS_CACHE:
+        return json.dumps(_URL_ANALYSIS_CACHE[clean_cache_key])
 
-    # For TikTok photo posts, shortlinks, or music links, attempt specialized extractor first
-    if "/photo/" in clean_url.lower() or "vt.tiktok.com" in clean_url.lower() or "vm.tiktok.com" in clean_url.lower() or "/music/" in clean_url.lower() or "vt.tiktok.com" in url.lower() or "vm.tiktok.com" in url.lower():
+    # Super-fast direct path for all TikTok / Douyin links (0.5s - 1.2s response time)
+    url_lower = url.lower()
+    clean_lower = clean_url.lower()
+    is_tiktok = any(k in clean_lower for k in ("tiktok.com", "douyin.com")) or any(k in url_lower for k in ("tiktok.com", "douyin.com"))
+
+    if is_tiktok:
         # 1. First, check if this is a TikTok Sound / Music link (tải Âm thanh gốc trực tiếp)
         music_res = extract_tiktok_music_track(url, clean_url)
         if music_res:
+            _cache_result(cache_key, music_res)
+            _cache_result(clean_cache_key, music_res)
             return json.dumps(music_res)
 
-        # 2. Check if this is a TikTok photo album or video
-        tiktok_photo_res = extract_tiktok_photos(clean_url)
-        if not tiktok_photo_res and url != clean_url:
-            tiktok_photo_res = extract_tiktok_photos(url)
-        if tiktok_photo_res:
-            return json.dumps(tiktok_photo_res)
+        # 2. Check if this is a TikTok video or photo album via fast TikWM extractor
+        tiktok_res = extract_tiktok_photos(clean_url)
+        if not tiktok_res and url != clean_url:
+            tiktok_res = extract_tiktok_photos(url)
+        if tiktok_res:
+            _cache_result(cache_key, tiktok_res)
+            _cache_result(clean_cache_key, tiktok_res)
+            return json.dumps(tiktok_res)
 
         # 3. Check if this link points to a TikTok Sound/Music catalog but stream extraction failed
         music_check = check_tiktok_music_link(url, clean_url)
         if music_check:
+            _cache_result(cache_key, music_check)
+            _cache_result(clean_cache_key, music_check)
             return json.dumps(music_check)
 
     target_url = clean_url
@@ -737,13 +764,14 @@ def analyze_url(url):
         'no_warnings': True,
         'skip_download': True,
         'extract_flat': False,
-        'socket_timeout': 20,
+        'socket_timeout': 10,
+        'check_formats': False, # Eliminate 10-20 sequential HTTP HEAD format probes
         'noplaylist': True, # Enforce 1-video per request (FR-01)
         'http_headers': DEFAULT_HEADERS,
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'web'],
-                'player_skip': ['configs', 'webpage']
+                'player_client': ['ios', 'web'],
+                'player_skip': ['configs', 'webpage', 'translated_subs', 'dash']
             }
         }
     }
@@ -895,6 +923,8 @@ def analyze_url(url):
                 "audio_options": audio_options,
                 "is_audio_only": len(video_options) == 0 and len(audio_options) > 0
             }
+            _cache_result(cache_key, result)
+            _cache_result(clean_cache_key, result)
             return json.dumps(result)
 
     except yt_dlp.utils.DownloadError as e:

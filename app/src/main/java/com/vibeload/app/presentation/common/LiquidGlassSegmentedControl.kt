@@ -105,71 +105,63 @@ fun LiquidGlassSegmentedControl(
             .padding(3.dp)
             .pointerInput(count) {
                 val touchSlop = viewConfiguration.touchSlop
+                val tabWidthPx = size.width.toFloat() / count
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    val downX = down.position.x
-                    val tabWidthPx = size.width.toFloat() / count
-                    var activeIndex = (downX / tabWidthPx).toInt().coerceIn(0, count - 1)
+                    val startX = down.position.x
+                    var activeIndex = (startX / tabWidthPx).toInt().coerceIn(0, count - 1)
                     var hasDragged = false
 
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) {
-                            change.consume()
-                            break
-                        }
-                        val currentX = change.position.x
-                        val deltaX = abs(currentX - downX)
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) {
+                                change.consume()
+                                break
+                            }
+                            val currentX = change.position.x
+                            val deltaX = abs(currentX - startX)
 
-                        if (!hasDragged && deltaX > touchSlop) {
-                            hasDragged = true
-                            isDragging = true
-                        }
-
-                        if (hasDragged) {
-                            val rawFraction = (currentX / tabWidthPx) - 0.5f
-                            val clampedFraction = rawFraction.coerceIn(0f, (count - 1).toFloat())
-                            coroutineScope.launch {
-                                tabPosition.snapTo(clampedFraction)
+                            if (!hasDragged && deltaX > touchSlop) {
+                                hasDragged = true
+                                isDragging = true
                             }
 
-                            val hoveredIndex = (currentX / tabWidthPx).toInt().coerceIn(0, count - 1)
-                            if (hoveredIndex != activeIndex) {
-                                activeIndex = hoveredIndex
-                                VibeHaptic.tab(view)
-                            }
-                            change.consume()
-                        }
-                    }
+                            if (hasDragged) {
+                                val currentFraction = ((currentX - tabWidthPx / 2f) / tabWidthPx).coerceIn(0f, (count - 1).toFloat())
+                                coroutineScope.launch {
+                                    tabPosition.snapTo(currentFraction)
+                                }
 
-                    if (hasDragged) {
+                                val hoveredIndex = currentFraction.roundToInt().coerceIn(0, count - 1)
+                                if (hoveredIndex != activeIndex) {
+                                    activeIndex = hoveredIndex
+                                    VibeHaptic.tab(view)
+                                }
+                                change.consume()
+                            }
+                        }
+                    } finally {
                         isDragging = false
-                        currentOnItemSelected(activeIndex)
+                        val finalIndex = if (hasDragged) {
+                            tabPosition.value.roundToInt().coerceIn(0, count - 1)
+                        } else {
+                            (startX / tabWidthPx).toInt().coerceIn(0, count - 1)
+                        }
+
+                        if (!hasDragged) {
+                            VibeHaptic.tab(view)
+                        }
+                        currentOnItemSelected(finalIndex)
                         coroutineScope.launch {
                             tabPosition.animateTo(
-                                targetValue = activeIndex.toFloat(),
+                                targetValue = finalIndex.toFloat(),
                                 animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioLowBouncy,
                                     stiffness = Spring.StiffnessMediumLow
                                 )
                             )
-                        }
-                    } else {
-                        // Quick clean tap
-                        val tappedIndex = (downX / tabWidthPx).toInt().coerceIn(0, count - 1)
-                        if (tappedIndex != currentSelectedIndex) {
-                            VibeHaptic.tab(view)
-                            currentOnItemSelected(tappedIndex)
-                            coroutineScope.launch {
-                                tabPosition.animateTo(
-                                    targetValue = tappedIndex.toFloat(),
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
-                                    )
-                                )
-                            }
                         }
                     }
                 }
