@@ -1,0 +1,9 @@
+{
+  "name": "vibeload-app-android",
+  "version": "1.0.18",
+  "private": true,
+  "description": "Android Native client for VibeLoad",
+  "scripts": {
+    "build": "node -e \"console.log('Android Repository - Web build skipped')\""
+  }
+}

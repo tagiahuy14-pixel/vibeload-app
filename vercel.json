@@ -1,0 +1,4 @@
+{
+  "buildCommand": "echo 'Android Repository - Skipping web build'",
+  "ignoreCommand": "exit 0"
+}
