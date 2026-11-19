@@ -82,18 +82,13 @@ fun LiquidGlassSegmentedControl(
     val controlHeight = if (isVertical) 52.dp else 44.dp
 
     val containerBg = if (isDark) {
-        Color(0xFF161E2E).copy(alpha = 0.85f)
+        Color(0xFF131D31).copy(alpha = 0.78f)
     } else {
-        Color(0xFFE2E8F0).copy(alpha = 0.80f)
+        Color(0xFFE2E8F0).copy(alpha = 0.85f)
     }
-    val containerBorder = if (isDark) Color(0x33FFFFFF) else Color(0x22000000)
+    val containerBorderBrush = LiquidGlassTokens.specularBorder(isDark)
 
-    val activeGlassBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF0071E3),
-            Color(0xFF2997FF)
-        )
-    )
+    val activeGlassBrush = LiquidGlassTokens.LiquidBlueCyanBrush
 
     BoxWithConstraints(
         modifier = modifier
@@ -101,7 +96,7 @@ fun LiquidGlassSegmentedControl(
             .height(controlHeight)
             .clip(RoundedCornerShape(999.dp))
             .background(containerBg)
-            .border(1.dp, containerBorder, RoundedCornerShape(999.dp))
+            .border(1.dp, containerBorderBrush, RoundedCornerShape(999.dp))
             .padding(3.dp)
             .pointerInput(count) {
                 val touchSlop = viewConfiguration.touchSlop
@@ -170,25 +165,41 @@ fun LiquidGlassSegmentedControl(
         val tabWidthDp = maxWidth / count
         val indicatorOffsetDp = tabWidthDp * tabPosition.value
 
-        // Sliding Glass Indicator Capsule
+        // Sliding Glass Indicator Capsule with Specular Glossy Sheen
         Box(
             modifier = Modifier
                 .offset(x = indicatorOffsetDp)
                 .width(tabWidthDp)
                 .fillMaxHeight()
                 .shadow(
-                    elevation = 4.dp,
+                    elevation = 6.dp,
                     shape = RoundedCornerShape(999.dp),
-                    spotColor = Color(0xFF0071E3).copy(alpha = 0.40f)
+                    spotColor = Color(0xFF0071E3).copy(alpha = 0.50f),
+                    ambientColor = Color(0xFF00C6FF).copy(alpha = 0.30f)
                 )
                 .clip(RoundedCornerShape(999.dp))
                 .background(activeGlassBrush)
                 .border(
                     1.dp,
-                    Color.White.copy(alpha = 0.45f),
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.78f),
+                            Color.White.copy(alpha = 0.28f),
+                            Color.White.copy(alpha = 0.08f)
+                        )
+                    ),
                     RoundedCornerShape(999.dp)
                 )
-        )
+        ) {
+            // Upper Glossy Specular Reflection Sheen (curved fluid glass highlight)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.48f)
+                    .clip(RoundedCornerShape(topStart = 999.dp, topEnd = 999.dp))
+                    .background(LiquidGlassTokens.glossySheenBrush(0.42f))
+            )
+        }
 
         // Tab items (Z-index above indicator)
         Row(

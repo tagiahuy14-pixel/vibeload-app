@@ -1,6 +1,11 @@
 package com.vibeload.app.presentation.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -8,6 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,6 +31,7 @@ import com.vibeload.app.data.local.entity.isImage
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import com.vibeload.app.presentation.common.LiquidGlassTokens
 import com.vibeload.app.presentation.downloading.DownloadingScreen
 import com.vibeload.app.presentation.downloading.DownloadingViewModel
 import com.vibeload.app.presentation.home.HomeScreen
@@ -52,58 +62,91 @@ fun AppNavigation(
     val showBottomBar = currentRoute?.startsWith("player") != true
 
     val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 6.dp,
-                    modifier = Modifier.border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp)
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation = 16.dp,
+                            spotColor = Color(0xFF0066FF).copy(alpha = 0.15f),
+                            ambientColor = Color(0xFF10B981).copy(alpha = 0.08f)
+                        )
+                        .background(LiquidGlassTokens.glassSurface(isDark, 0.88f))
+                        .drawBehind {
+                            val strokeWidth = 1.dp.toPx()
+                            drawLine(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = if (isDark) 0.05f else 0.25f),
+                                        Color.White.copy(alpha = if (isDark) 0.40f else 0.85f),
+                                        Color(0xFF00C6FF).copy(alpha = if (isDark) 0.45f else 0.55f),
+                                        Color.White.copy(alpha = if (isDark) 0.25f else 0.60f),
+                                        Color.White.copy(alpha = if (isDark) 0.05f else 0.20f)
+                                    )
+                                ),
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width, 0f),
+                                strokeWidth = strokeWidth
+                            )
+                        }
                 ) {
-                    bottomNavItems.forEach { screen ->
-                        val selected = currentRoute == screen.route
-                        NavigationBarItem(
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            ),
-                            icon = {
-                                if (screen == Screen.Downloading && isDownloadActive) {
-                                    BadgedBox(
-                                        badge = {
-                                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
-                                                Text("1", color = Color.White)
+                    // Upper Glossy Sheen
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                            .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.08f else 0.20f))
+                    )
+
+                    NavigationBar(
+                        containerColor = Color.Transparent,
+                        tonalElevation = 0.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        bottomNavItems.forEach { screen ->
+                            val selected = currentRoute == screen.route
+                            NavigationBarItem(
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    indicatorColor = if (isDark) Color(0xFF0071E3).copy(alpha = 0.25f) else Color(0xFF0071E3).copy(alpha = 0.12f)
+                                ),
+                                icon = {
+                                    if (screen == Screen.Downloading && isDownloadActive) {
+                                        BadgedBox(
+                                            badge = {
+                                                Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                                    Text("1", color = Color.White)
+                                                }
                                             }
+                                        ) {
+                                            Icon(screen.icon, contentDescription = screen.title)
                                         }
-                                    ) {
+                                    } else {
                                         Icon(screen.icon, contentDescription = screen.title)
                                     }
-                                } else {
-                                    Icon(screen.icon, contentDescription = screen.title)
-                                }
-                            },
-                            label = { Text(screen.title, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
-                            selected = selected,
-                            onClick = {
-                                if (currentRoute != screen.route) {
-                                    navController.navigate(screen.route) {
-                                        popUpTo(Screen.Home.route) {
-                                            saveState = true
+                                },
+                                label = { Text(screen.title, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
+                                selected = selected,
+                                onClick = {
+                                    if (currentRoute != screen.route) {
+                                        navController.navigate(screen.route) {
+                                            popUpTo(Screen.Home.route) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
-                                        launchSingleTop = true
-                                        restoreState = true
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

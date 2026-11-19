@@ -2,7 +2,7 @@
   "versionCode": 21,
   "versionName": "1.0.20",
   "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.20/app-release.apk",
-  "sha256": "D579B9555C41390BF2C3355C1CDC158CE22AB09C8D32104917E9004FF3DC7A23",
+  "sha256": "C57F1DF81806FD3C709A6F8429637C734C9E2E75EA818253117B96286C0F643F",
   "mandatory": false,
-  "releaseNotes": "Tối ưu hóa tốc độ phân tích video siêu tốc (<1.2s qua TikWM API & In-memory cache), sửa lỗi thanh điều khiển phân đoạn Liquid Glass với cử chỉ lướt chuẩn xác và bố cục cân đối không tràn viền."
+  "releaseNotes": "Nâng cấp toàn diện ngôn ngữ thiết kế Apple Liquid Glass: viền phản quang specular highlight 135°, hiệu ứng vòm bóng thủy tinh lỏng, nền ánh sáng môi trường khuếch tán xanh lam - lục bảo - cyan đa tầng cùng thanh điều hướng mờ acrylic nổi."
 }

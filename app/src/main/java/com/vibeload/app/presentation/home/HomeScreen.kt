@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -67,8 +68,10 @@ import com.vibeload.app.R
 import com.vibeload.app.data.local.entity.HistoryEntity
 import com.vibeload.app.data.local.entity.isImage
 import com.vibeload.app.domain.model.FormatOption
+import com.vibeload.app.presentation.common.LiquidGlassAmbientBackground
 import com.vibeload.app.presentation.common.LiquidGlassSegmentedControl
 import com.vibeload.app.presentation.common.LiquidGlassTabItem
+import com.vibeload.app.presentation.common.LiquidGlassTokens
 import com.vibeload.app.presentation.common.VibeHaptic
 import com.vibeload.app.presentation.library.LibrarySortOrder
 import com.vibeload.app.presentation.library.LibraryViewModel
@@ -251,6 +254,7 @@ fun HomeScreen(
     val downloadedItems by libraryViewModel.items.collectAsState()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val isDark = isSystemInDarkTheme()
 
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val errorRequester = remember { BringIntoViewRequester() }
@@ -316,9 +320,11 @@ fun HomeScreen(
     }
 
     val gradientPrimary = remember {
-        Brush.horizontalGradient(
-            colors = listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
-        )
+        LiquidGlassTokens.LiquidBlueCyanBrush
+    }
+
+    val gradientQuick = remember {
+        LiquidGlassTokens.LiquidAmberCoralBrush
     }
 
     val gradientText = remember {
@@ -327,14 +333,14 @@ fun HomeScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(scrollState)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    LiquidGlassAmbientBackground(isDark = isDark) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         // Top Header
         Row(
             modifier = Modifier
@@ -381,13 +387,18 @@ fun HomeScreen(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Crown VIP Icon
+                // Crown VIP Icon - Frosted Liquid Glass Circle
                 Box(
                     modifier = Modifier
                         .size(40.dp)
+                        .shadow(
+                            elevation = 3.dp,
+                            shape = CircleShape,
+                            spotColor = Color(0xFFFBBF24).copy(alpha = 0.25f)
+                        )
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        .background(LiquidGlassTokens.glassSurface(isDark, 0.72f))
+                        .border(1.dp, LiquidGlassTokens.specularBorder(isDark), CircleShape)
                         .bounceClick {
                             Toast.makeText(context, "VibeLoad Pro — 100% On-Device • Không quảng cáo • Tải không giới hạn", Toast.LENGTH_SHORT).show()
                         },
@@ -401,13 +412,18 @@ fun HomeScreen(
                     )
                 }
 
-                // Settings Gear Icon
+                // Settings Gear Icon - Frosted Liquid Glass Circle
                 Box(
                     modifier = Modifier
                         .size(40.dp)
+                        .shadow(
+                            elevation = 3.dp,
+                            shape = CircleShape,
+                            spotColor = Color(0xFF0071E3).copy(alpha = 0.20f)
+                        )
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        .background(LiquidGlassTokens.glassSurface(isDark, 0.72f))
+                        .border(1.dp, LiquidGlassTokens.specularBorder(isDark), CircleShape)
                         .bounceClick { onNavigateToSettings() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -421,15 +437,21 @@ fun HomeScreen(
             }
         }
 
-        // Smart Clipboard Detection Banner
+        // Smart Clipboard Detection Banner - Frosted Liquid Glass Pill
         clipboardCandidateUrl?.let { url ->
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                    .padding(bottom = 12.dp)
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(18.dp),
+                        spotColor = Color(0xFF0071E3).copy(alpha = 0.25f),
+                        ambientColor = Color(0xFF00C6FF).copy(alpha = 0.15f)
+                    )
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(LiquidGlassTokens.glassElevated(isDark, 0.82f))
+                    .border(1.dp, LiquidGlassTokens.specularBorder(isDark), RoundedCornerShape(18.dp))
                     .bounceClick {
                         keyboardController?.hide()
                         focusManager.clearFocus()
@@ -437,7 +459,7 @@ fun HomeScreen(
                         viewModel.analyzeUrl()
                         clipboardCandidateUrl = null
                     }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .padding(horizontal = 14.dp, vertical = 11.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -446,7 +468,7 @@ fun HomeScreen(
                     Icon(
                         imageVector = Icons.Default.ContentPaste,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = Color(0xFF0071E3),
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
@@ -455,7 +477,7 @@ fun HomeScreen(
                             text = "Phát hiện liên kết ${clipboardPlatformName ?: ""}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = Color(0xFF0071E3)
                         )
                         Text(
                             text = url,
@@ -470,21 +492,35 @@ fun HomeScreen(
                         text = "Dán & Tải",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color(0xFF0071E3)
                     )
                 }
             }
         }
 
-        // Link Input Box
+        // Link Input Box - Frosted Liquid Glass Panel
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
+                .shadow(
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(22.dp),
+                    spotColor = Color(0xFF0071E3).copy(alpha = 0.20f),
+                    ambientColor = Color(0xFF10B981).copy(alpha = 0.10f)
+                )
+                .clip(RoundedCornerShape(22.dp))
+                .background(LiquidGlassTokens.glassElevated(isDark, 0.85f))
+                .border(1.dp, LiquidGlassTokens.specularBorder(isDark), RoundedCornerShape(22.dp))
                 .padding(horizontal = 14.dp, vertical = 4.dp)
         ) {
+            // Upper Glossy Sheen
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.12f else 0.28f))
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -492,7 +528,7 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Default.Link,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = Color(0xFF0071E3),
                     modifier = Modifier.size(22.dp)
                 )
 
@@ -526,7 +562,7 @@ fun HomeScreen(
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
-                        cursorColor = MaterialTheme.colorScheme.primary
+                        cursorColor = Color(0xFF0071E3)
                     ),
                     singleLine = true
                 )
@@ -551,7 +587,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.ContentPaste,
                             contentDescription = "Dán",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = Color(0xFF0071E3),
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -562,24 +598,36 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         val view = LocalView.current
-        val gradientQuick = remember {
-            Brush.horizontalGradient(
-                colors = listOf(Color(0xFFF59E0B), Color(0xFFEA580C))
-            )
-        }
 
-        // Action Buttons: "Phân tích" & "⚡ Tải nhanh (Bản nét nhất)"
+        // Action Buttons: "Phân tích" & "⚡ Tải nhanh" (Authentic Liquid Glass Buttons)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Button 1: "Phân tích"
+            // Button 1: "Phân tích" - Liquid Glass Azure to Cyan Pill
             Box(
                 modifier = Modifier
                     .weight(1.2f)
                     .height(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(gradientPrimary)
+                    .shadow(
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(999.dp),
+                        spotColor = Color(0xFF0071E3).copy(alpha = 0.45f),
+                        ambientColor = Color(0xFF00C6FF).copy(alpha = 0.25f)
+                    )
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(LiquidGlassTokens.LiquidBlueCyanBrush)
+                    .border(
+                        1.dp,
+                        Brush.linearGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.78f),
+                                Color.White.copy(alpha = 0.25f),
+                                Color.White.copy(alpha = 0.05f)
+                            )
+                        ),
+                        RoundedCornerShape(999.dp)
+                    )
                     .bounceClick(enabled = !uiState.isAnalyzing && uiState.urlInput.isNotBlank()) {
                         VibeHaptic.click(view)
                         keyboardController?.hide()
@@ -588,6 +636,15 @@ fun HomeScreen(
                     },
                 contentAlignment = Alignment.Center
             ) {
+                // Upper Glossy Sheen Highlight
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.5f)
+                        .clip(RoundedCornerShape(topStart = 999.dp, topEnd = 999.dp))
+                        .background(LiquidGlassTokens.glossySheenBrush(0.42f))
+                )
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -623,13 +680,30 @@ fun HomeScreen(
                 }
             }
 
-            // Button 2: "⚡ Tải nhanh" (One-Tap Best Quality)
+            // Button 2: "⚡ Tải nhanh" - Liquid Glass Amber to Coral Pill
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(gradientQuick)
+                    .shadow(
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(999.dp),
+                        spotColor = Color(0xFFF59E0B).copy(alpha = 0.40f),
+                        ambientColor = Color(0xFFEA580C).copy(alpha = 0.20f)
+                    )
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(LiquidGlassTokens.LiquidAmberCoralBrush)
+                    .border(
+                        1.dp,
+                        Brush.linearGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.78f),
+                                Color.White.copy(alpha = 0.25f),
+                                Color.White.copy(alpha = 0.05f)
+                            )
+                        ),
+                        RoundedCornerShape(999.dp)
+                    )
                     .bounceClick(enabled = !uiState.isAnalyzing && uiState.urlInput.isNotBlank()) {
                         VibeHaptic.success(view)
                         keyboardController?.hide()
@@ -638,6 +712,15 @@ fun HomeScreen(
                     },
                 contentAlignment = Alignment.Center
             ) {
+                // Upper Glossy Sheen Highlight
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.5f)
+                        .clip(RoundedCornerShape(topStart = 999.dp, topEnd = 999.dp))
+                        .background(LiquidGlassTokens.glossySheenBrush(0.42f))
+                )
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -659,7 +742,7 @@ fun HomeScreen(
                         )
                         Text(
                             text = "Bản nét nhất",
-                            color = Color.White.copy(alpha = 0.85f),
+                            color = Color.White.copy(alpha = 0.88f),
                             fontSize = 10.sp,
                             lineHeight = 12.sp
                         )
@@ -1588,6 +1671,7 @@ fun HomeScreen(
             containerColor = MaterialTheme.colorScheme.surface
         )
     }
+    }
 }
 
 /**
@@ -1598,14 +1682,29 @@ fun ModernPlatformCard(
     platform: SupportedPlatform,
     onClick: () -> Unit
 ) {
-    Card(
+    val isDark = isSystemInDarkTheme()
+    Box(
         modifier = Modifier
             .width(138.dp)
-            .bounceClick { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = Color(0xFF0071E3).copy(alpha = 0.18f),
+                ambientColor = Color(0xFF10B981).copy(alpha = 0.10f)
+            )
+            .clip(RoundedCornerShape(20.dp))
+            .background(LiquidGlassTokens.glassSurface(isDark, 0.76f))
+            .border(1.dp, LiquidGlassTokens.specularBorder(isDark), RoundedCornerShape(20.dp))
+            .bounceClick { onClick() }
     ) {
+        // Upper Glossy Sheen
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(36.dp)
+                .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.12f else 0.32f))
+        )
+
         Column(
             modifier = Modifier.padding(14.dp),
             horizontalAlignment = Alignment.Start
@@ -1613,8 +1712,13 @@ fun ModernPlatformCard(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(platform.containerBgColor),
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(platform.containerBgColor)
+                    .border(
+                        1.dp,
+                        Color.White.copy(alpha = if (isDark) 0.22f else 0.65f),
+                        RoundedCornerShape(14.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1662,18 +1766,34 @@ fun CapabilityCard(
     description: String,
     badges: List<String>
 ) {
-    Card(
+    val isDark = isSystemInDarkTheme()
+    val shape = RoundedCornerShape(22.dp)
+    Box(
         modifier = Modifier
             .width(280.dp)
-            .height(188.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            .height(188.dp)
+            .shadow(
+                elevation = 6.dp,
+                shape = shape,
+                spotColor = iconGradient.first().copy(alpha = 0.20f),
+                ambientColor = Color(0xFF0066FF).copy(alpha = 0.10f)
+            )
+            .clip(shape)
+            .background(LiquidGlassTokens.glassSurface(isDark, 0.78f))
+            .border(1.dp, LiquidGlassTokens.specularBorder(isDark), shape)
     ) {
+        // Upper Curved Glossy Sheen
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .background(LiquidGlassTokens.glossySheenBrush(if (isDark) 0.10f else 0.28f))
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Header Row: Icon + Title & Subtitle
@@ -1683,16 +1803,17 @@ fun CapabilityCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Brush.linearGradient(iconGradient)),
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.linearGradient(iconGradient))
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -1734,22 +1855,32 @@ fun CapabilityCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(26.dp),
+                .height(26.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 badges.take(2).forEach { badge ->
+                    val badgeShape = RoundedCornerShape(999.dp)
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .clip(badgeShape)
+                            .background(
+                                if (isDark) Color.White.copy(alpha = 0.08f)
+                                else Color.White.copy(alpha = 0.55f)
+                            )
+                            .border(
+                                1.dp,
+                                if (isDark) Color.White.copy(alpha = 0.14f)
+                                else Color.White.copy(alpha = 0.75f),
+                                badgeShape
+                            )
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = badge,
                             fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1
                         )
                     }
