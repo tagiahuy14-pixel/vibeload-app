@@ -1,8 +1,8 @@
 {
-  "versionCode": 17,
-  "versionName": "1.0.16",
-  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.16/app-release.apk",
-  "sha256": "77771073CA1008175AA59F9237396209581959825D4CD6147B300BE49C6C3301",
+  "versionCode": 18,
+  "versionName": "1.0.17",
+  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.17/app-release.apk",
+  "sha256": "FAE64131956019B01C7D2A3A41F818B74AEBADFF6A664C2A5D95504ECDD74878",
   "mandatory": false,
   "releaseNotes": "Cải tiến giao diện nút chọn chất lượng siêu nổi bật (viền 2dp, badge tích xanh), bộ làm sạch tên file lưu trữ thông minh và tích hợp cài làm nhạc chuông/báo thức 1 chạm."
 }

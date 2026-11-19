@@ -67,6 +67,8 @@ import com.vibeload.app.R
 import com.vibeload.app.data.local.entity.HistoryEntity
 import com.vibeload.app.data.local.entity.isImage
 import com.vibeload.app.domain.model.FormatOption
+import com.vibeload.app.presentation.common.LiquidGlassSegmentedControl
+import com.vibeload.app.presentation.common.LiquidGlassTabItem
 import com.vibeload.app.presentation.common.VibeHaptic
 import com.vibeload.app.presentation.library.LibrarySortOrder
 import com.vibeload.app.presentation.library.LibraryViewModel
@@ -1190,29 +1192,15 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
-                        TabRow(
-                            selectedTabIndex = uiState.formatCategoryTab,
-                            modifier = Modifier.clip(RoundedCornerShape(12.dp)),
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Tab(
-                                selected = uiState.formatCategoryTab == 0,
-                                onClick = { viewModel.setFormatCategoryTab(0) },
-                                text = { Text("Video (MP4)", color = if (uiState.formatCategoryTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) },
-                                icon = { Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (uiState.formatCategoryTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
-                            )
-                            Tab(
-                                selected = uiState.formatCategoryTab == 1,
-                                onClick = { viewModel.setFormatCategoryTab(1) },
-                                text = { Text("Âm thanh (MP3)", color = if (uiState.formatCategoryTab == 1) AccentPurple else MaterialTheme.colorScheme.onSurfaceVariant) },
-                                icon = { Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (uiState.formatCategoryTab == 1) AccentPurple else MaterialTheme.colorScheme.onSurfaceVariant) }
-                            )
-                            Tab(
-                                selected = uiState.formatCategoryTab == 2,
-                                onClick = { viewModel.setFormatCategoryTab(2) },
-                                text = { Text("Gốc", color = if (uiState.formatCategoryTab == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
-                            )
-                        }
+                        LiquidGlassSegmentedControl(
+                            items = listOf(
+                                LiquidGlassTabItem("Video (MP4)", Icons.Default.Videocam),
+                                LiquidGlassTabItem("Âm thanh (MP3)", Icons.Default.MusicNote),
+                                LiquidGlassTabItem("Gốc")
+                            ),
+                            selectedIndex = uiState.formatCategoryTab,
+                            onItemSelected = { viewModel.setFormatCategoryTab(it) }
+                        )
 
                         // Options chips
                         FlowRow(
@@ -1339,45 +1327,18 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Filter Pills: "Tất cả (count)", "Video", "Âm thanh", "Ảnh"
-        // Wrapped with horizontalScroll & defaultMinSize to guarantee NO SQUISHING on any screen ratio
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val totalCount = downloadedItems.size
-            FilterPill(
-                title = "Tất cả",
-                count = totalCount,
-                icon = Icons.Default.Layers,
-                isSelected = libraryUiState.selectedTab == 0,
-                onClick = { libraryViewModel.selectTab(0) }
-            )
-            FilterPill(
-                title = "Video",
-                count = null,
-                icon = Icons.Default.PlayArrow,
-                isSelected = libraryUiState.selectedTab == 1,
-                onClick = { libraryViewModel.selectTab(1) }
-            )
-            FilterPill(
-                title = "Âm thanh",
-                count = null,
-                icon = Icons.Default.MusicNote,
-                isSelected = libraryUiState.selectedTab == 2,
-                onClick = { libraryViewModel.selectTab(2) }
-            )
-            FilterPill(
-                title = "Ảnh",
-                count = null,
-                icon = Icons.Default.Image,
-                isSelected = libraryUiState.selectedTab == 3,
-                onClick = { libraryViewModel.selectTab(3) }
-            )
-        }
+        // Filter Pills: Apple Liquid Glass segmented control with sliding capsule
+        val totalCount = downloadedItems.size
+        LiquidGlassSegmentedControl(
+            items = listOf(
+                LiquidGlassTabItem("Tất cả", Icons.Default.Layers, count = totalCount),
+                LiquidGlassTabItem("Video", Icons.Default.PlayArrow),
+                LiquidGlassTabItem("Âm thanh", Icons.Default.MusicNote),
+                LiquidGlassTabItem("Ảnh", Icons.Default.Image)
+            ),
+            selectedIndex = libraryUiState.selectedTab,
+            onItemSelected = { libraryViewModel.selectTab(it) }
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 

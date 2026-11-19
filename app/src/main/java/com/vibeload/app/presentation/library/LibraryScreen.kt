@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +31,8 @@ import coil.request.ImageRequest
 import com.vibeload.app.data.local.entity.HistoryEntity
 import com.vibeload.app.data.local.entity.getFormattedDuration
 import com.vibeload.app.data.local.entity.isImage
+import com.vibeload.app.presentation.common.LiquidGlassSegmentedControl
+import com.vibeload.app.presentation.common.LiquidGlassTabItem
 import com.vibeload.app.presentation.common.VibeHaptic
 import java.text.SimpleDateFormat
 import java.util.*
@@ -102,32 +106,18 @@ fun LibraryScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            // Sub-tabs (Tất cả, Video, Âm thanh)
-            TabRow(
-                selectedTabIndex = uiState.selectedTab,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            ) {
-                Tab(
-                    selected = uiState.selectedTab == 0,
-                    onClick = { viewModel.selectTab(0) },
-                    text = { Text("Tất cả") }
-                )
-                Tab(
-                    selected = uiState.selectedTab == 1,
-                    onClick = { viewModel.selectTab(1) },
-                    text = { Text("Video") }
-                )
-                Tab(
-                    selected = uiState.selectedTab == 2,
-                    onClick = { viewModel.selectTab(2) },
-                    text = { Text("Âm thanh") }
-                )
-                Tab(
-                    selected = uiState.selectedTab == 3,
-                    onClick = { viewModel.selectTab(3) },
-                    text = { Text("Ảnh") }
-                )
-            }
+            // Sub-tabs (Tất cả, Video, Âm thanh, Ảnh) with Liquid Glass sliding indicator
+            LiquidGlassSegmentedControl(
+                items = listOf(
+                    LiquidGlassTabItem("Tất cả", Icons.Default.Layers),
+                    LiquidGlassTabItem("Video", Icons.Default.PlayArrow),
+                    LiquidGlassTabItem("Âm thanh", Icons.Default.MusicNote),
+                    LiquidGlassTabItem("Ảnh", Icons.Default.Image)
+                ),
+                selectedIndex = uiState.selectedTab,
+                onItemSelected = { viewModel.selectTab(it) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            )
 
             // Items List or Empty State
             if (items.isEmpty()) {
@@ -270,7 +260,7 @@ private fun SortMenu(
 
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.Sort, contentDescription = "Sắp xếp")
+            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sắp xếp")
         }
 
         DropdownMenu(
@@ -500,7 +490,7 @@ fun MediaItemCard(
                             menuExpanded = false
                             onOpenExternal()
                         },
-                        leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) }
                     )
                     if (item.isAudio && onSetRingtone != null) {
                         HorizontalDivider()
