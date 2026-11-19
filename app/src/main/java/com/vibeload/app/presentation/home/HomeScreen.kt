@@ -1331,7 +1331,7 @@ fun HomeScreen(
         val totalCount = downloadedItems.size
         LiquidGlassSegmentedControl(
             items = listOf(
-                LiquidGlassTabItem("Tất cả", Icons.Default.Layers, count = if (totalCount > 0) totalCount else null),
+                LiquidGlassTabItem("Tất cả", Icons.Default.Layers),
                 LiquidGlassTabItem("Video", Icons.Default.PlayArrow),
                 LiquidGlassTabItem("Âm thanh", Icons.Default.MusicNote),
                 LiquidGlassTabItem("Ảnh", Icons.Default.Image)

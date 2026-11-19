@@ -1,7 +1,7 @@
 package com.vibeload.app.presentation.common
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,6 +28,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 data class LiquidGlassTabItem(
     val title: String,
@@ -41,10 +43,6 @@ data class LiquidGlassTabItem(
  * Features an ultra-smooth sliding glass capsule thumb indicator powered by spring physics,
  * glass specular highlights, and real-time interactive gliding/dragging across buttons with haptic feedback
  * (matching Samsung OneUI & iOS dynamic segmented control).
- *
- * Supports two layout modes:
- * - Vertical (Icon on top, Label below): perfectly balanced, zero truncation, identical spacing for Vietnamese text.
- * - Horizontal (Icon and Label side-by-side): compact row for fewer or wider items.
  */
 @Composable
 fun LiquidGlassSegmentedControl(
@@ -52,22 +50,41 @@ fun LiquidGlassSegmentedControl(
     selectedIndex: Int,
     onItemSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    isVertical: Boolean? = null
+    isVertical: Boolean = false
 ) {
     if (items.isEmpty()) return
 
     val view = LocalView.current
-    val density = LocalDensity.current
     val isDark = isSystemInDarkTheme()
+    val count = items.size.coerceAtLeast(1)
+    val coroutineScope = rememberCoroutineScope()
 
-    // Auto-detect vertical layout if 4 or more items and they all have icons to prevent Vietnamese text truncation
-    val useVertical = isVertical ?: (items.size >= 4 && items.all { it.icon != null })
-    val controlHeight = if (useVertical) 56.dp else 44.dp
+    val currentSelectedIndex by rememberUpdatedState(selectedIndex.coerceIn(0, count - 1))
+    val currentOnItemSelected by rememberUpdatedState(onItemSelected)
+
+    // Animated fractional position [0.0f .. (count - 1).toFloat()]
+    val tabPosition = remember { Animatable(currentSelectedIndex.toFloat()) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    // Sync with external selectedIndex changes when not dragging
+    LaunchedEffect(currentSelectedIndex) {
+        if (!isDragging && tabPosition.targetValue != currentSelectedIndex.toFloat()) {
+            tabPosition.animateTo(
+                targetValue = currentSelectedIndex.toFloat(),
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+        }
+    }
+
+    val controlHeight = if (isVertical) 52.dp else 44.dp
 
     val containerBg = if (isDark) {
-        Color(0xFF1E293B).copy(alpha = 0.72f)
+        Color(0xFF161E2E).copy(alpha = 0.85f)
     } else {
-        Color(0xFFE2E8F0).copy(alpha = 0.75f)
+        Color(0xFFE2E8F0).copy(alpha = 0.80f)
     }
     val containerBorder = if (isDark) Color(0x33FFFFFF) else Color(0x22000000)
 
@@ -78,9 +95,6 @@ fun LiquidGlassSegmentedControl(
         )
     )
 
-    var isDragging by remember { mutableStateOf(false) }
-    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
-
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
@@ -88,18 +102,14 @@ fun LiquidGlassSegmentedControl(
             .clip(RoundedCornerShape(999.dp))
             .background(containerBg)
             .border(1.dp, containerBorder, RoundedCornerShape(999.dp))
-            .padding(4.dp)
-            .pointerInput(items.size, selectedIndex) {
-                val count = items.size.coerceAtLeast(1)
-                val contentWidthPx = size.width.toFloat()
-                val tabWidthPx = contentWidthPx / count
+            .padding(3.dp)
+            .pointerInput(count) {
                 val touchSlop = viewConfiguration.touchSlop
-
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    val startX = down.position.x
-                    var currentX = startX
-                    var activeIndex = (currentX / tabWidthPx).toInt().coerceIn(0, count - 1)
+                    val downX = down.position.x
+                    val tabWidthPx = size.width.toFloat() / count
+                    var activeIndex = (downX / tabWidthPx).toInt().coerceIn(0, count - 1)
                     var hasDragged = false
 
                     while (true) {
@@ -109,20 +119,25 @@ fun LiquidGlassSegmentedControl(
                             change.consume()
                             break
                         }
-                        currentX = change.position.x
-                        val diff = kotlin.math.abs(currentX - startX)
-                        if (!hasDragged && diff > touchSlop) {
+                        val currentX = change.position.x
+                        val deltaX = abs(currentX - downX)
+
+                        if (!hasDragged && deltaX > touchSlop) {
                             hasDragged = true
                             isDragging = true
                         }
+
                         if (hasDragged) {
-                            val rawOffset = currentX - (tabWidthPx / 2f)
-                            dragOffsetPx = rawOffset.coerceIn(0f, (count - 1) * tabWidthPx)
-                            val newIndex = (currentX / tabWidthPx).toInt().coerceIn(0, count - 1)
-                            if (newIndex != activeIndex) {
-                                activeIndex = newIndex
+                            val rawFraction = (currentX / tabWidthPx) - 0.5f
+                            val clampedFraction = rawFraction.coerceIn(0f, (count - 1).toFloat())
+                            coroutineScope.launch {
+                                tabPosition.snapTo(clampedFraction)
+                            }
+
+                            val hoveredIndex = (currentX / tabWidthPx).toInt().coerceIn(0, count - 1)
+                            if (hoveredIndex != activeIndex) {
+                                activeIndex = hoveredIndex
                                 VibeHaptic.tab(view)
-                                onItemSelected(newIndex)
                             }
                             change.consume()
                         }
@@ -130,58 +145,55 @@ fun LiquidGlassSegmentedControl(
 
                     if (hasDragged) {
                         isDragging = false
+                        currentOnItemSelected(activeIndex)
+                        coroutineScope.launch {
+                            tabPosition.animateTo(
+                                targetValue = activeIndex.toFloat(),
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                        }
                     } else {
-                        // Instant clean tap without drag
-                        val tappedIndex = (startX / tabWidthPx).toInt().coerceIn(0, count - 1)
-                        if (tappedIndex != selectedIndex) {
+                        // Quick clean tap
+                        val tappedIndex = (downX / tabWidthPx).toInt().coerceIn(0, count - 1)
+                        if (tappedIndex != currentSelectedIndex) {
                             VibeHaptic.tab(view)
-                            onItemSelected(tappedIndex)
+                            currentOnItemSelected(tappedIndex)
+                            coroutineScope.launch {
+                                tabPosition.animateTo(
+                                    targetValue = tappedIndex.toFloat(),
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    )
+                                )
+                            }
                         }
                     }
                 }
             }
     ) {
-        val count = items.size.coerceAtLeast(1)
         val tabWidthDp = maxWidth / count
-
-        val targetOffsetDp = if (isDragging) {
-            with(density) { dragOffsetPx.toDp() }
-        } else {
-            tabWidthDp * selectedIndex.coerceIn(0, count - 1)
-        }
-
-        val indicatorOffset by animateDpAsState(
-            targetValue = targetOffsetDp,
-            animationSpec = if (isDragging) {
-                spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessHigh
-                )
-            } else {
-                spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            },
-            label = "liquidGlassSliderOffset"
-        )
+        val indicatorOffsetDp = tabWidthDp * tabPosition.value
 
         // Sliding Glass Indicator Capsule
         Box(
             modifier = Modifier
-                .offset(x = indicatorOffset)
+                .offset(x = indicatorOffsetDp)
                 .width(tabWidthDp)
                 .fillMaxHeight()
                 .shadow(
-                    elevation = 6.dp,
+                    elevation = 4.dp,
                     shape = RoundedCornerShape(999.dp),
-                    spotColor = Color(0xFF0071E3).copy(alpha = 0.45f)
+                    spotColor = Color(0xFF0071E3).copy(alpha = 0.40f)
                 )
                 .clip(RoundedCornerShape(999.dp))
                 .background(activeGlassBrush)
                 .border(
-                    0.5.dp,
-                    Color.White.copy(alpha = 0.5f),
+                    1.dp,
+                    Color.White.copy(alpha = 0.45f),
                     RoundedCornerShape(999.dp)
                 )
         )
@@ -193,8 +205,10 @@ fun LiquidGlassSegmentedControl(
                 .zIndex(2f),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val visualSelectedIndex = tabPosition.value.roundToInt().coerceIn(0, count - 1)
+
             items.forEachIndexed { index, item ->
-                val isSelected = index == selectedIndex
+                val isSelected = index == visualSelectedIndex
                 val textColor = if (isSelected) {
                     Color.White
                 } else if (isDark) {
@@ -209,61 +223,13 @@ fun LiquidGlassSegmentedControl(
                         .fillMaxHeight(),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (useVertical) {
-                        // Symmetrical Vertical Layout: Icon on Top, Label on Bottom (No text truncation)
+                    if (isVertical) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                item.icon?.let { icon ->
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        tint = textColor,
-                                        modifier = Modifier.size(19.dp)
-                                    )
-                                }
-                                if (item.count != null && item.count > 0) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .offset(x = 10.dp, y = (-4).dp)
-                                            .clip(RoundedCornerShape(999.dp))
-                                            .background(if (isSelected) Color.White.copy(alpha = 0.3f) else Color(0xFF0071E3))
-                                            .padding(horizontal = 4.dp, vertical = 0.5.dp)
-                                    ) {
-                                        Text(
-                                            text = item.count.toString(),
-                                            color = Color.White,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            lineHeight = 10.sp
-                                        )
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = item.title,
-                                color = textColor,
-                                fontSize = 11.5.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Clip,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    } else {
-                        // Horizontal Layout: Icon and Label side-by-side
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(horizontal = 6.dp)
+                                .padding(horizontal = 2.dp, vertical = 2.dp)
                         ) {
                             item.icon?.let { icon ->
                                 Icon(
@@ -272,35 +238,57 @@ fun LiquidGlassSegmentedControl(
                                     tint = textColor,
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
                             }
                             Text(
                                 text = item.title,
                                 color = textColor,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                softWrap = false,
+                                overflow = TextOverflow.Clip,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    } else {
+                        // Symmetrical, evenly spaced Horizontal Layout
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 2.dp)
+                        ) {
+                            item.icon?.let { icon ->
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = textColor,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.5.dp))
+                            }
+                            Text(
+                                text = item.title,
+                                color = textColor,
+                                fontSize = 11.5.sp,
+                                letterSpacing = (-0.2).sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Clip,
+                                textAlign = TextAlign.Center
                             )
                             if (item.count != null && item.count > 0) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(
-                                            if (isSelected) Color.White.copy(alpha = 0.25f)
-                                            else if (isDark) Color.White.copy(alpha = 0.1f)
-                                            else Color.Black.copy(alpha = 0.08f)
-                                        )
-                                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = item.count.toString(),
-                                        color = textColor,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "(${item.count})",
+                                    color = if (isSelected) Color.White.copy(alpha = 0.9f) else textColor.copy(alpha = 0.75f),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
+                                )
                             }
                         }
                     }

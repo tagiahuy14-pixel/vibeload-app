@@ -1,8 +1,8 @@
 {
-  "versionCode": 19,
-  "versionName": "1.0.18",
-  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.18/app-release.apk",
-  "sha256": "01C838A35BD471B9AEEFA6358459691DB2A370BDEA5C77117910B3056E20E409",
+  "versionCode": 20,
+  "versionName": "1.0.19",
+  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.19/app-release.apk",
+  "sha256": "1DDBCE97A26AFB166F7BBE320C41C790B84FB36C82B133475382F32F8884A7E1",
   "mandatory": false,
-  "releaseNotes": "Cải tiến giao diện nút chọn chất lượng siêu nổi bật (viền 2dp, badge tích xanh), bộ làm sạch tên file lưu trữ thông minh và tích hợp cài làm nhạc chuông/báo thức 1 chạm."
+  "releaseNotes": "Sửa triệt để giao diện thanh điều khiển phân đoạn Liquid Glass: bố cục hàng ngang cân xứng, chống tràn chữ Tiếng Việt và tối ưu chuyển động lướt vuốt lò xo mượt mà chuẩn Samsung OneUI."
 }
