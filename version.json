@@ -1,8 +1,8 @@
 {
-  "versionCode": 21,
-  "versionName": "1.0.20",
-  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.20/app-release.apk",
-  "sha256": "C57F1DF81806FD3C709A6F8429637C734C9E2E75EA818253117B96286C0F643F",
+  "versionCode": 22,
+  "versionName": "1.0.21",
+  "downloadUrl": "https://github.com/tagiahuy14-pixel/vibeload-app/releases/download/v1.0.21/app-release.apk",
+  "sha256": "0FFF7166C417920E1B32AB0588E979FDB0A8D80C88CBD5D0CFAE56928CD573BC",
   "mandatory": false,
-  "releaseNotes": "Nâng cấp toàn diện ngôn ngữ thiết kế Apple Liquid Glass: viền phản quang specular highlight 135°, hiệu ứng vòm bóng thủy tinh lỏng, nền ánh sáng môi trường khuếch tán xanh lam - lục bảo - cyan đa tầng cùng thanh điều hướng mờ acrylic nổi."
+  "releaseNotes": "Thêm hiệu ứng trượt Liquid Glass mượt mà cho thanh điều hướng dưới (Home, Tải xuống, Thư viện, Cài đặt), đồng bộ chuẩn xác giao diện Sáng/Tối chống chìm chữ và căn chỉnh hài hòa khối nền tảng hỗ trợ."
 }

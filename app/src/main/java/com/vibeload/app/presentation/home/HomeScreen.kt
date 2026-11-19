@@ -73,6 +73,7 @@ import com.vibeload.app.presentation.common.LiquidGlassSegmentedControl
 import com.vibeload.app.presentation.common.LiquidGlassTabItem
 import com.vibeload.app.presentation.common.LiquidGlassTokens
 import com.vibeload.app.presentation.common.VibeHaptic
+import com.vibeload.app.presentation.theme.isAppDarkTheme
 import com.vibeload.app.presentation.library.LibrarySortOrder
 import com.vibeload.app.presentation.library.LibraryViewModel
 import com.vibeload.app.presentation.theme.AccentPurple
@@ -254,7 +255,7 @@ fun HomeScreen(
     val downloadedItems by libraryViewModel.items.collectAsState()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
 
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val errorRequester = remember { BringIntoViewRequester() }
@@ -397,7 +398,7 @@ fun HomeScreen(
                             spotColor = Color(0xFFFBBF24).copy(alpha = 0.25f)
                         )
                         .clip(CircleShape)
-                        .background(LiquidGlassTokens.glassSurface(isDark, 0.72f))
+                        .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.72f else 0.88f))
                         .border(1.dp, LiquidGlassTokens.specularBorder(isDark), CircleShape)
                         .bounceClick {
                             Toast.makeText(context, "VibeLoad Pro — 100% On-Device • Không quảng cáo • Tải không giới hạn", Toast.LENGTH_SHORT).show()
@@ -422,7 +423,7 @@ fun HomeScreen(
                             spotColor = Color(0xFF0071E3).copy(alpha = 0.20f)
                         )
                         .clip(CircleShape)
-                        .background(LiquidGlassTokens.glassSurface(isDark, 0.72f))
+                        .background(LiquidGlassTokens.glassSurface(isDark, if (isDark) 0.72f else 0.88f))
                         .border(1.dp, LiquidGlassTokens.specularBorder(isDark), CircleShape)
                         .bounceClick { onNavigateToSettings() },
                     contentAlignment = Alignment.Center
@@ -430,7 +431,7 @@ fun HomeScreen(
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Cài đặt",
-                        tint = MaterialTheme.colorScheme.onSurface,
+                        tint = if (isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -757,37 +758,51 @@ fun HomeScreen(
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
                         text = "Nền tảng hỗ trợ",
-                        fontSize = 16.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    Text(
-                        text = "Chạm để dán nhanh hoặc xem định dạng tải",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "100+ Trang",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(
+                                if (isDark) Color(0xFF0071E3).copy(alpha = 0.22f)
+                                else Color(0xFF0071E3).copy(alpha = 0.10f)
+                            )
+                            .border(
+                                1.dp,
+                                if (isDark) Color(0xFF00C6FF).copy(alpha = 0.35f)
+                                else Color(0xFF0071E3).copy(alpha = 0.25f),
+                                RoundedCornerShape(999.dp)
+                            )
+                            .padding(horizontal = 9.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "100+ Trang",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Chạm để dán nhanh hoặc xem định dạng tải",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -950,7 +965,7 @@ fun HomeScreen(
                         .bringIntoViewRequester(bringIntoViewRequester),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    val isDark = isSystemInDarkTheme()
+                    val isDark = isAppDarkTheme()
                     val realImages = meta.imageOptions.filter { it.formatId != "ALL_IMAGES" }
                     val hasMultipleImages = meta.isImageOnly && realImages.size > 1
                     val previewIndex = if (hasMultipleImages) uiState.previewImageIndex.coerceIn(0, (realImages.size - 1).coerceAtLeast(0)) else 0
@@ -1682,7 +1697,7 @@ fun ModernPlatformCard(
     platform: SupportedPlatform,
     onClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     Box(
         modifier = Modifier
             .width(138.dp)
@@ -1766,7 +1781,7 @@ fun CapabilityCard(
     description: String,
     badges: List<String>
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     val shape = RoundedCornerShape(22.dp)
     Box(
         modifier = Modifier
@@ -2012,7 +2027,7 @@ fun FilterPill(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     val selectedBgColor = MaterialTheme.colorScheme.primary
     val unselectedBgColor = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
     val selectedContentColor = Color.White
@@ -2380,7 +2395,7 @@ fun FormatChip(
     durationSeconds: Long = 0L,
     onClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
 
     // Vibrant selected colors vs crisp unselected colors
     val targetBgColor = if (isSelected) {

@@ -64,7 +64,7 @@ object LiquidGlassTokens {
         return if (isDark) {
             Color(0xFF121B2D).copy(alpha = alpha)
         } else {
-            Color(0xFFFFFFFF).copy(alpha = alpha)
+            Color(0xFFFFFFFF).copy(alpha = if (alpha > 0.85f) alpha else 0.85f)
         }
     }
 
@@ -72,21 +72,33 @@ object LiquidGlassTokens {
         return if (isDark) {
             Color(0xFF18233A).copy(alpha = alpha)
         } else {
-            Color(0xFFFFFFFF).copy(alpha = alpha)
+            Color(0xFFFFFFFF).copy(alpha = 0.95f)
         }
     }
 
     // Specular Highlight Border Brush (Directional 135-deg light reflection)
-    fun specularBorder(isDark: Boolean, startAlpha: Float = if (isDark) 0.35f else 0.85f): Brush {
-        return Brush.linearGradient(
-            colors = listOf(
-                Color.White.copy(alpha = startAlpha),
-                Color.White.copy(alpha = startAlpha * 0.35f),
-                Color.White.copy(alpha = 0.03f)
-            ),
-            start = Offset(0f, 0f),
-            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-        )
+    fun specularBorder(isDark: Boolean, startAlpha: Float = if (isDark) 0.35f else 0.90f): Brush {
+        return if (isDark) {
+            Brush.linearGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = startAlpha),
+                    Color.White.copy(alpha = startAlpha * 0.35f),
+                    Color.White.copy(alpha = 0.03f)
+                ),
+                start = Offset(0f, 0f),
+                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+            )
+        } else {
+            Brush.linearGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = startAlpha),
+                    Color.White.copy(alpha = startAlpha * 0.60f),
+                    Color(0xFFCBD5E1).copy(alpha = 0.50f)
+                ),
+                start = Offset(0f, 0f),
+                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+            )
+        }
     }
 
     // Glossy Sheen Overlay Brush (Upper 45-50% specular reflection)

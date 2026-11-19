@@ -14,8 +14,8 @@ android {
         applicationId = "com.vibeload.app"
         minSdk = 29
         targetSdk = 35
-        versionCode = 21
-        versionName = "1.0.20"
+        versionCode = 22
+        versionName = "1.0.21"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

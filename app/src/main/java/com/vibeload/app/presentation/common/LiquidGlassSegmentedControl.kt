@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import com.vibeload.app.presentation.theme.isAppDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -55,7 +56,7 @@ fun LiquidGlassSegmentedControl(
     if (items.isEmpty()) return
 
     val view = LocalView.current
-    val isDark = isSystemInDarkTheme()
+    val isDark = isAppDarkTheme()
     val count = items.size.coerceAtLeast(1)
     val coroutineScope = rememberCoroutineScope()
 
