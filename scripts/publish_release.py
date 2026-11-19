@@ -202,19 +202,11 @@ def main():
 `{sha256}`
 
 ### Tính năng & Cải tiến nổi bật:
-- 🎨 **Sửa triệt để lỗi nút chọn định dạng & chất lượng (`FormatChip`)**:
-  - Khi được chọn: Viền dày **2.dp sắc nét** (`#2563EB` ở chế độ Sáng, `#60A5FA` dạ quang ở chế độ Tối), nền chuyển màu container tinh tế (`#EFF6FF` / `#1E3A8A` 55%), chữ đậm tương phản cao đạt chuẩn WCAG AAA.
-  - Bổ sung **Badge tròn tích xanh ✅** ở góc phải mỗi thẻ khi chọn, khắc phục hoàn toàn hiện tượng nút bị chìm xuống hay mất viền.
-  - Đồng bộ chiều rộng tối thiểu `148.dp`, giữ bố cục 2 cột cân đối, thẳng tắp trên mọi kích cỡ màn hình.
-- 🧹 **Bộ làm sạch Tên file lưu trữ thông minh (`Smart Filename Sanitizer`)**:
-  - Tự động lọc sạch các tiền tố thừa như `Âm thanh: `, `Âm thanh_ `, `Video: `, `Nhạc: `, các ký tự rác và dấu gạch dưới lặp lại.
-  - Tên file lưu trữ luôn xuất ra gọn gàng, chuẩn xác (ví dụ: `âm thanh gốc – ash.mp3`).
-- 🔔 **Cài làm Nhạc chuông / Chuông báo thức 1 chạm (Ringtone & Alarm Studio)**:
-  - Tự động gắn cờ `IS_RINGTONE`, `IS_ALARM`, `IS_NOTIFICATION` vào hệ thống Android MediaStore khi tải về.
-  - Thêm tùy chọn "Đặt làm nhạc chuông" và "Đặt làm chuông báo thức" trong menu 3 chấm ở Thư viện và Trang chủ.
-  - Bổ sung 2 nút thao tác nhanh **[🔔 Cài nhạc chuông]** và **[⏰ Đặt báo thức]** ngay dưới giao diện trình phát nhạc.
-- 🏷️ **Tự động nhúng thẻ ID3 Metadata**:
-  - Tự động ghi thông tin Tác giả, Tiêu đề bài hát và Album `VibeLoad` chuẩn ID3v2 vào ruột tệp MP3, hiển thị đầy đủ trên mọi app nghe nhạc (Spotify Local, Samsung Music, Apple Music).
+- 🚀 **Khắc phục triệt để lỗi chuyển tab thanh điều hướng Liquid Glass Dock**:
+  - Sửa lỗi stale closure trong gesture tracker và điều hướng `findStartDestination`, cho phép người dùng chuyển mượt mà qua lại giữa tất cả các tab (Trang chủ, Tải xuống, Thư viện, Cài đặt) và quay về Trang chủ bất kỳ lúc nào mà không bị kẹt.
+  - Hiệu ứng vuốt trượt con nhộng mượt mà với cảm biến phản hồi rung haptic chính xác.
+- 🎨 **Giao diện Liquid Glass thẩm mỹ & tương phản cao**:
+  - Tối ưu màu sắc text, badge hỗ trợ 100+ trang và hiệu ứng kính mờ cho cả giao diện Sáng và Tối.
 - ⚡ **100% On-Device & Bảo mật**: Toàn bộ quy trình phân tích và tải media diễn ra trực tiếp trên thiết bị, không lưu trữ qua máy chủ trung gian.
 """
 
@@ -322,7 +314,7 @@ def main():
                 "downloadUrl": f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/{tag_name}/app-release.apk",
                 "sha256": sha256,
                 "mandatory": False,
-                "releaseNotes": f"Cải tiến giao diện nút chọn chất lượng siêu nổi bật (viền 2dp, badge tích xanh), bộ làm sạch tên file lưu trữ thông minh và tích hợp cài làm nhạc chuông/báo thức 1 chạm."
+                "releaseNotes": f"Khắc phục triệt để lỗi thanh điều hướng Liquid Glass Dock: chuyển đổi mượt mà giữa tất cả các tab và quay về Trang chủ bất kỳ lúc nào."
             }
             with open(version_json_path, "w", encoding="utf-8") as f:
                 json.dump(version_manifest, f, ensure_ascii=False, indent=2)
