@@ -32,6 +32,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -88,6 +89,23 @@ fun AppNavigation(
                 val navPosition = remember { Animatable(selectedIndex.toFloat()) }
                 var isDraggingNav by remember { mutableStateOf(false) }
 
+                val currentRouteState by rememberUpdatedState(currentRoute)
+                val currentSelectedIndex by rememberUpdatedState(selectedIndex)
+
+                val onNavigateToTab by rememberUpdatedState { targetIndex: Int ->
+                    val targetScreen = bottomNavItems.getOrNull(targetIndex) ?: return@rememberUpdatedState
+                    val activeRoute = currentRouteState ?: navController.currentDestination?.route
+                    if (activeRoute != targetScreen.route) {
+                        navController.navigate(targetScreen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                }
+
                 LaunchedEffect(selectedIndex) {
                     if (!isDraggingNav && navPosition.targetValue != selectedIndex.toFloat()) {
                         navPosition.animateTo(
@@ -143,6 +161,7 @@ fun AppNavigation(
                                         val startX = down.position.x
                                         var activeIndex = (startX / tabWidthPx).toInt().coerceIn(0, count - 1)
                                         var hasDragged = false
+                                        var completedGesture = false
 
                                         try {
                                             while (true) {
@@ -150,6 +169,7 @@ fun AppNavigation(
                                                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
                                                 if (!change.pressed) {
                                                     change.consume()
+                                                    completedGesture = true
                                                     break
                                                 }
                                                 val currentX = change.position.x
@@ -176,35 +196,38 @@ fun AppNavigation(
                                             }
                                         } finally {
                                             isDraggingNav = false
-                                            val finalIndex = if (hasDragged) {
-                                                navPosition.value.roundToInt().coerceIn(0, count - 1)
-                                            } else {
-                                                (startX / tabWidthPx).toInt().coerceIn(0, count - 1)
-                                            }
-
-                                            if (!hasDragged) {
-                                                VibeHaptic.tab(view)
-                                            }
-
-                                            val targetScreen = bottomNavItems[finalIndex]
-                                            if (currentRoute != targetScreen.route) {
-                                                navController.navigate(targetScreen.route) {
-                                                    popUpTo(Screen.Home.route) {
-                                                        saveState = true
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = true
+                                            if (completedGesture) {
+                                                val finalIndex = if (hasDragged) {
+                                                    navPosition.value.roundToInt().coerceIn(0, count - 1)
+                                                } else {
+                                                    (startX / tabWidthPx).toInt().coerceIn(0, count - 1)
                                                 }
-                                            }
 
-                                            coroutineScope.launch {
-                                                navPosition.animateTo(
-                                                    targetValue = finalIndex.toFloat(),
-                                                    animationSpec = spring(
-                                                        dampingRatio = 0.82f,
-                                                        stiffness = 420f
+                                                if (!hasDragged) {
+                                                    VibeHaptic.tab(view)
+                                                }
+
+                                                onNavigateToTab(finalIndex)
+
+                                                coroutineScope.launch {
+                                                    navPosition.animateTo(
+                                                        targetValue = finalIndex.toFloat(),
+                                                        animationSpec = spring(
+                                                            dampingRatio = 0.82f,
+                                                            stiffness = 420f
+                                                        )
                                                     )
-                                                )
+                                                }
+                                            } else {
+                                                coroutineScope.launch {
+                                                    navPosition.animateTo(
+                                                        targetValue = currentSelectedIndex.toFloat(),
+                                                        animationSpec = spring(
+                                                            dampingRatio = 0.82f,
+                                                            stiffness = 420f
+                                                        )
+                                                    )
+                                                }
                                             }
                                         }
                                     }
